@@ -16,7 +16,12 @@ import type { Lyric, LyricSourceResult, ProviderParameters } from "./providers/s
 import { getLyrics, newSourceMap, providerPriority } from "./providers/shared";
 import type { YTLyricSourceResult } from "./providers/yt";
 import { getSongMetadata, getSongAlbum, type SegmentMap } from "./requestSniffer/requestSniffer";
-import { clearCache as clearTranslationCache } from "./translation";
+import {
+  clearCache as clearTranslationCache,
+  clearPrefetchCache,
+  prefetchTranslations,
+  prefetchRomanizations,
+} from "./translation";
 
 const hideInstrumentalOnly = registerThemeSetting("blyrics-hide-instrumental-only", false, true);
 
@@ -323,6 +328,10 @@ export async function preFetchLyrics(
   isMusicVideo: boolean
 ): Promise<void> {
   log(LOG_PREFIX, "Prefetching next song", detail, isMusicVideo);
+
+  // Clear stale prefetch data from any previous preload cycle
+  clearPrefetchCache();
+
   let song = detail.song;
   let artist = detail.artist;
   let videoId = detail.videoId;
@@ -386,6 +395,8 @@ export async function preFetchLyrics(
     log(err);
   }
 
+  let prefetchLyricLines: string[] | null = null;
+
   for (let provider of providerPriority) {
     if (signal.aborted) {
       return;
@@ -395,10 +406,39 @@ export async function preFetchLyrics(
       let sourceLyrics = await getLyrics(providerParameters, provider);
 
       if (sourceLyrics && sourceLyrics.lyrics && sourceLyrics.lyrics.length > 0) {
+        prefetchLyricLines = sourceLyrics.lyrics
+          .filter(l => !l.isInstrumental && l.words.trim() && l.words.trim() !== "♪")
+          .map(l => l.words);
         break;
       }
     } catch (err) {
       log(err);
+    }
+  }
+
+  if (prefetchLyricLines && prefetchLyricLines.length > 0 && !signal.aborted) {
+    const prefetchPromises: Promise<void>[] = [];
+
+    if (AppState.isTranslateEnabled) {
+      prefetchPromises.push(
+        prefetchTranslations(prefetchLyricLines, AppState.translationLanguage, signal).catch(err => {
+          log(LOG_PREFIX, "Error prefetching translations:", err);
+        })
+      );
+    }
+
+    if (AppState.isRomanizationEnabled) {
+      prefetchPromises.push(
+        prefetchRomanizations(prefetchLyricLines, signal).catch(err => {
+          log(LOG_PREFIX, "Error prefetching romanizations:", err);
+        })
+      );
+    }
+
+    if (prefetchPromises.length > 0) {
+      log(LOG_PREFIX, "Prefetching translations/romanizations for next song");
+      await Promise.all(prefetchPromises);
+      log(LOG_PREFIX, "Done prefetching translations/romanizations for next song");
     }
   }
 }

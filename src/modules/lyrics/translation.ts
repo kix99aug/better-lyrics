@@ -17,6 +17,11 @@ const cache: TranslationCache = {
   translation: new Map(),
 };
 
+const prefetchCache: TranslationCache = {
+  romanization: new Map(),
+  translation: new Map(),
+};
+
 interface BatchRequest {
   lines: string[];
   targetLanguage?: string; // For translations
@@ -43,17 +48,23 @@ const MAX_URL_LENGTH = 15000;
  * Translates a batch of lyric lines in a single request, chunked if necessary.
  * Dispatches to either Google Translate or OpenAI-compatible API based on settings.
  */
-export async function translateBatch(request: BatchRequest): Promise<BatchTranslationResponse> {
+export async function translateBatch(
+  request: BatchRequest,
+  targetCache: TranslationCache = cache
+): Promise<BatchTranslationResponse> {
   if (AppState.isAITranslateEnabled) {
-    return translateBatchWithAI(request);
+    return translateBatchWithAI(request, targetCache);
   }
-  return translateBatchWithGoogle(request);
+  return translateBatchWithGoogle(request, targetCache);
 }
 
 /**
  * Google Translate implementation.
  */
-async function translateBatchWithGoogle(request: BatchRequest): Promise<BatchTranslationResponse> {
+async function translateBatchWithGoogle(
+  request: BatchRequest,
+  targetCache: TranslationCache = cache
+): Promise<BatchTranslationResponse> {
   const { lines, targetLanguage, signal } = request;
   if (!targetLanguage || lines.length === 0) {
     return { results: lines.map(() => null), detectedLanguage: "" };
@@ -67,8 +78,9 @@ async function translateBatchWithGoogle(request: BatchRequest): Promise<BatchTra
     if (!trimmed || trimmed === "♪") return;
 
     const cacheKey = `${targetLanguage}_${trimmed}`;
-    if (cache.translation.has(cacheKey)) {
-      results[index] = cache.translation.get(cacheKey)!;
+    const cached = cache.translation.get(cacheKey) ?? prefetchCache.translation.get(cacheKey);
+    if (cached) {
+      results[index] = cached;
     } else {
       toTranslate.push({ index, text: trimmed });
     }
@@ -144,7 +156,7 @@ async function translateBatchWithGoogle(request: BatchRequest): Promise<BatchTra
         const translatedText = translatedLines[i]?.trim();
         if (translatedText && translatedText.toLowerCase() !== item.text.toLowerCase()) {
           const result = { originalLanguage: detectedLanguage, translatedText };
-          cache.translation.set(`${targetLanguage}_${item.text}`, result);
+          targetCache.translation.set(`${targetLanguage}_${item.text}`, result);
           results[item.index] = result;
         }
       });
@@ -162,7 +174,10 @@ async function translateBatchWithGoogle(request: BatchRequest): Promise<BatchTra
  * Translates using a local OpenAI-compatible API with streaming.
  * Uses chrome.runtime.Port for real-time SSE streaming through the background worker.
  */
-async function translateBatchWithAI(request: BatchRequest): Promise<BatchTranslationResponse> {
+async function translateBatchWithAI(
+  request: BatchRequest,
+  targetCache: TranslationCache = cache
+): Promise<BatchTranslationResponse> {
   const { lines, targetLanguage, signal, onLineTranslated } = request;
   if (!targetLanguage || lines.length === 0) {
     return { results: lines.map(() => null), detectedLanguage: "" };
@@ -183,8 +198,8 @@ async function translateBatchWithAI(request: BatchRequest): Promise<BatchTransla
     if (!trimmed || trimmed === "♪") return;
 
     const cacheKey = `${targetLanguage}_${trimmed}`;
-    if (cache.translation.has(cacheKey)) {
-      const cached = cache.translation.get(cacheKey)!;
+    const cached = cache.translation.get(cacheKey) ?? prefetchCache.translation.get(cacheKey);
+    if (cached) {
       results[index] = cached;
       // Fire callback for cached results too
       if (onLineTranslated) onLineTranslated(index, cached);
@@ -238,7 +253,7 @@ async function translateBatchWithAI(request: BatchRequest): Promise<BatchTransla
       };
 
       // Stream via Port through background service worker
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         const port = chrome.runtime.connect({ name: "aiTranslateStream" });
         let accumulatedText = "";
 
@@ -255,7 +270,7 @@ async function translateBatchWithAI(request: BatchRequest): Promise<BatchTransla
 
           if (translatedText && translatedText.toLowerCase() !== chunkItem.text.toLowerCase()) {
             const result: TranslationResult = { originalLanguage: detectedLanguage, translatedText };
-            cache.translation.set(`${targetLanguage}_${chunkItem.text}`, result);
+            targetCache.translation.set(`${targetLanguage}_${chunkItem.text}`, result);
             results[chunkItem.index] = result;
             if (onLineTranslated) onLineTranslated(chunkItem.index, result);
           }
@@ -312,7 +327,10 @@ async function translateBatchWithAI(request: BatchRequest): Promise<BatchTransla
 /**
  * Romanizes a batch of lyric lines in a single request, chunked if necessary.
  */
-export async function romanizeBatch(request: BatchRequest): Promise<BatchRomanizationResponse> {
+export async function romanizeBatch(
+  request: BatchRequest,
+  targetCache: TranslationCache = cache
+): Promise<BatchRomanizationResponse> {
   const { lines, sourceLanguage, signal } = request;
   if (lines.length === 0) {
     return { results: lines.map(() => null), detectedLanguage: "" };
@@ -326,8 +344,9 @@ export async function romanizeBatch(request: BatchRequest): Promise<BatchRomaniz
     const trimmed = line.trim();
     if (!trimmed || trimmed === "♪") return;
 
-    if (cache.romanization.has(trimmed)) {
-      results[index] = cache.romanization.get(trimmed)!;
+    const cached = cache.romanization.get(trimmed) ?? prefetchCache.romanization.get(trimmed);
+    if (cached) {
+      results[index] = cached;
     } else {
       toRomanize.push({ index, text: trimmed });
     }
@@ -405,7 +424,7 @@ export async function romanizeBatch(request: BatchRequest): Promise<BatchRomaniz
       chunk.forEach((item, i) => {
         const romanizedText = romanizedLines[i]?.trim();
         if (romanizedText && romanizedText.toLowerCase() !== item.text.toLowerCase()) {
-          cache.romanization.set(item.text, romanizedText);
+          targetCache.romanization.set(item.text, romanizedText);
           results[item.index] = romanizedText;
         }
       });
@@ -424,11 +443,43 @@ export function clearCache(): void {
   cache.translation.clear();
 }
 
+export function clearPrefetchCache(): void {
+  prefetchCache.romanization.clear();
+  prefetchCache.translation.clear();
+}
+
 export function getTranslationFromCache(text: string, targetLanguage: string): TranslationResult | null {
   const cacheKey = `${targetLanguage}_${text.trim()}`;
-  return cache.translation.get(cacheKey) || null;
+  return cache.translation.get(cacheKey) ?? prefetchCache.translation.get(cacheKey) ?? null;
 }
 
 export function getRomanizationFromCache(text: string): string | null {
-  return cache.romanization.get(text.trim()) || null;
+  const trimmed = text.trim();
+  return cache.romanization.get(trimmed) ?? prefetchCache.romanization.get(trimmed) ?? null;
+}
+
+/**
+ * Pre-fetches translations for the next song's lyrics and stores them in the prefetch cache.
+ * The prefetch cache persists across song switches (unlike the main cache which is cleared).
+ * AI translation pre-fetching is skipped because streaming AI responses are not suitable for prefetch.
+ */
+export async function prefetchTranslations(
+  lines: string[],
+  targetLanguage: string,
+  signal?: AbortSignal
+): Promise<void> {
+  if (!targetLanguage || lines.length === 0) return;
+  if (AppState.isAITranslateEnabled) return;
+
+  await translateBatch({ lines, targetLanguage, signal }, prefetchCache);
+}
+
+/**
+ * Pre-fetches romanizations for the next song's lyrics and stores them in the prefetch cache.
+ * The prefetch cache persists across song switches (unlike the main cache which is cleared).
+ */
+export async function prefetchRomanizations(lines: string[], signal?: AbortSignal): Promise<void> {
+  if (lines.length === 0) return;
+
+  await romanizeBatch({ lines, sourceLanguage: "auto", signal }, prefetchCache);
 }
