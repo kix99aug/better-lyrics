@@ -45,15 +45,29 @@ const BATCH_SEPARATOR = "\n\n;\n\n";
 const MAX_URL_LENGTH = 15000;
 
 /**
+ * Tracks the in-flight AI translation promise for the current song.
+ * Prefetch calls wait for this to complete before submitting their own AI request,
+ * so the current song is always translated first.
+ */
+let activeCurrentSongAITranslationPromise: Promise<BatchTranslationResponse> | null = null;
+
+/**
  * Translates a batch of lyric lines in a single request, chunked if necessary.
  * Dispatches to either Google Translate or OpenAI-compatible API based on settings.
+ * When using AI translation, current-song calls are tracked so that prefetch calls
+ * can wait for them to finish before starting.
  */
 export async function translateBatch(
   request: BatchRequest,
   targetCache: TranslationCache = cache
 ): Promise<BatchTranslationResponse> {
   if (AppState.isAITranslateEnabled) {
-    return translateBatchWithAI(request, targetCache);
+    const promise = translateBatchWithAI(request, targetCache);
+    if (targetCache === cache) {
+      // Track the current song's AI translation so prefetch can wait for it.
+      activeCurrentSongAITranslationPromise = promise;
+    }
+    return promise;
   }
   return translateBatchWithGoogle(request, targetCache);
 }
@@ -173,6 +187,8 @@ async function translateBatchWithGoogle(
 /**
  * Translates using a local OpenAI-compatible API with streaming.
  * Uses chrome.runtime.Port for real-time SSE streaming through the background worker.
+ * When called for prefetch (targetCache !== cache), waits for the current song's
+ * AI translation to finish first so resources are not contended.
  */
 async function translateBatchWithAI(
   request: BatchRequest,
@@ -181,6 +197,12 @@ async function translateBatchWithAI(
   const { lines, targetLanguage, signal, onLineTranslated } = request;
   if (!targetLanguage || lines.length === 0) {
     return { results: lines.map(() => null), detectedLanguage: "" };
+  }
+
+  // Prefetch calls wait for the current song's AI translation to complete first.
+  // Use .catch() so a failure in the current song's translation still allows the prefetch to proceed.
+  if (targetCache !== cache && activeCurrentSongAITranslationPromise) {
+    await activeCurrentSongAITranslationPromise.catch(() => {});
   }
 
   const systemPrompt =
@@ -461,7 +483,8 @@ export function getRomanizationFromCache(text: string): string | null {
 /**
  * Pre-fetches translations for the next song's lyrics and stores them in the prefetch cache.
  * The prefetch cache persists across song switches (unlike the main cache which is cleared).
- * AI translation pre-fetching is skipped because streaming AI responses are not suitable for prefetch.
+ * When AI translation is enabled, this call waits for the current song's AI translation to
+ * complete before sending the next song's request, ensuring the current song is always served first.
  */
 export async function prefetchTranslations(
   lines: string[],
@@ -469,7 +492,6 @@ export async function prefetchTranslations(
   signal?: AbortSignal
 ): Promise<void> {
   if (!targetLanguage || lines.length === 0) return;
-  if (AppState.isAITranslateEnabled) return;
 
   await translateBatch({ lines, targetLanguage, signal }, prefetchCache);
 }

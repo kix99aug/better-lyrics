@@ -407,7 +407,10 @@ export async function preFetchLyrics(
 
       if (sourceLyrics && sourceLyrics.lyrics && sourceLyrics.lyrics.length > 0) {
         prefetchLyricLines = sourceLyrics.lyrics
-          .filter(l => !l.isInstrumental && l.words.trim() && l.words.trim() !== "♪")
+          .filter(l => {
+            const words = l.words.trim();
+            return !l.isInstrumental && words && words !== "♪";
+          })
           .map(l => l.words);
         break;
       }
