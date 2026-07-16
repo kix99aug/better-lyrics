@@ -140,7 +140,7 @@ export function initProviders(): void {
     }
   });
 
-  chrome.storage.sync.get({ preferredProviderList: null }, function (items) {
+  chrome.storage.local.get({ preferredProviderList: null }, function (items) {
     updateProvidersList(items.preferredProviderList as string[] | null);
   });
 }

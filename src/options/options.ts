@@ -67,7 +67,7 @@ const getOptionsFromForm = (): Options => {
 
 // Function to save options to Chrome storage
 const saveOptionsToStorage = (options: Options): void => {
-  chrome.storage.sync.set(options, () => {
+  chrome.storage.local.set(options, () => {
     chrome.tabs.query({ url: "https://music.youtube.com/*" }, tabs => {
       tabs.forEach(tab => {
         chrome.tabs.sendMessage(tab.id!, {
@@ -152,7 +152,7 @@ const _formatBytes = (bytes: number, decimals = 2): string => {
 
 // Function to subscribe to cache info updates
 const subscribeToCacheInfo = (): void => {
-  chrome.storage.sync.get("cacheInfo", items => {
+  chrome.storage.local.get("cacheInfo", items => {
     //@ts-ignore -- I'm lazy someone fix this
     updateCacheInfo(items);
   });
@@ -219,7 +219,7 @@ const restoreOptions = (): void => {
     openaiModel: "gpt-4o-mini",
   };
 
-  chrome.storage.sync.get(defaultOptions, setOptionsInForm);
+  chrome.storage.local.get(defaultOptions, setOptionsInForm);
 
   document.getElementById("clear-cache")!.addEventListener("click", () => clearTransientLyrics());
 };

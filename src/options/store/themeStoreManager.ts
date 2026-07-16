@@ -203,11 +203,11 @@ export async function getActiveStoreTheme(): Promise<string | null> {
 }
 
 export async function setActiveStoreTheme(themeId: string): Promise<void> {
-  await chrome.storage.sync.set({ [ACTIVE_STORE_THEME_KEY]: themeId });
+  await chrome.storage.local.set({ [ACTIVE_STORE_THEME_KEY]: themeId });
 }
 
 export async function clearActiveStoreTheme(): Promise<void> {
-  await chrome.storage.sync.remove(ACTIVE_STORE_THEME_KEY);
+  await chrome.storage.local.remove(ACTIVE_STORE_THEME_KEY);
 }
 
 export async function applyStoreTheme(themeId: string): Promise<string> {

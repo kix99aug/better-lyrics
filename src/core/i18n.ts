@@ -38,7 +38,7 @@ let overrideMessages: Record<string, MessageEntry> | null = null;
 
 export async function loadLocaleOverride(): Promise<void> {
   try {
-    const items = await chrome.storage.sync.get({ uiLanguage: "auto" });
+    const items = await chrome.storage.local.get({ uiLanguage: "auto" });
     const locale = items.uiLanguage as string | undefined;
 
     if (!locale || locale === "auto") {

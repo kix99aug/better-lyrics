@@ -215,7 +215,7 @@ class EditorStateManager {
 
   async clearThemeState(): Promise<void> {
     console.log(LOG_PREFIX_EDITOR, "Clearing theme state");
-    await chrome.storage.sync.remove("themeName");
+    await chrome.storage.local.remove("themeName");
     this.currentThemeName = null;
     this.isCustomTheme = false;
     this.isStoreTheme = false;

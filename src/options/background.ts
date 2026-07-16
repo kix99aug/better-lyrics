@@ -40,11 +40,11 @@ async function saveThemeCSS(css: string, title: string, creators: string[]): Pro
   const cssSize = new Blob([themeContent]).size;
 
   if (cssSize <= SYNC_STORAGE_LIMIT) {
-    await chrome.storage.sync.set({ customCSS: themeContent, cssStorageType: "sync", cssCompressed: false });
+    await chrome.storage.local.set({ customCSS: themeContent, cssStorageType: "sync", cssCompressed: false });
   } else {
     await chrome.storage.local.set({ customCSS: themeContent, cssCompressed: false });
-    await chrome.storage.sync.set({ cssStorageType: "local", cssCompressed: false });
-    await chrome.storage.sync.remove("customCSS");
+    await chrome.storage.local.set({ cssStorageType: "local", cssCompressed: false });
+    await chrome.storage.local.remove("customCSS");
   }
 }
 
@@ -60,12 +60,12 @@ async function migrateSymlinkedThemes(): Promise<void> {
       const storeId = SYMLINKED_THEME_MAP[themeName];
       if (storeId) {
         console.log(LOG_PREFIX_BACKGROUND, `Migrating symlinked theme: ${themeName} → store:${storeId}`);
-        await chrome.storage.sync.set({ themeName: `store:${storeId}` });
+        await chrome.storage.local.set({ themeName: `store:${storeId}` });
         await setActiveStoreTheme(storeId);
         const installed = await installSymlinkedThemeFromMarketplace(storeId);
         if (!installed) {
-          await chrome.storage.sync.set({ themeName });
-          await chrome.storage.sync.remove("activeStoreTheme");
+          await chrome.storage.local.set({ themeName });
+          await chrome.storage.local.remove("activeStoreTheme");
           return;
         }
         await saveThemeCSS(installed.css, installed.title, installed.creators);
