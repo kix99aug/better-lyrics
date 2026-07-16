@@ -45,6 +45,10 @@ interface AppStateType {
   openaiModel: string;
   hasPreloadedNextSong: boolean;
   currentInjectionId: number;
+  pipWindow: Window | null;
+  pipTabRenderer: HTMLElement | null;
+  isAutoPipEnabled: boolean;
+  isAutoPipActive: boolean;
 }
 
 export const AppState: AppStateType = {
@@ -73,6 +77,10 @@ export const AppState: AppStateType = {
   openaiModel: "gpt-4o-mini",
   hasPreloadedNextSong: false,
   currentInjectionId: 0,
+  pipWindow: null,
+  pipTabRenderer: null,
+  isAutoPipEnabled: false,
+  isAutoPipActive: false,
 };
 
 export function reloadLyrics(): void {

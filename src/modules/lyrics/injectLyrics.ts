@@ -20,6 +20,7 @@ import {
 } from "@constants";
 import { t } from "@core/i18n";
 import { AppState } from "@core/appState";
+import * as OpenCC from "opencc-js";
 import { containsNonLatin, detectNonLatinLanguage, testRtl } from "@modules/lyrics/lyricParseUtils";
 import { createInstrumentalElement } from "@modules/lyrics/createInstrumentalElement";
 import { applySegmentMapToLyrics, type LyricSourceResultWithMeta } from "@modules/lyrics/lyrics";
@@ -281,6 +282,69 @@ function injectLyrics(data: LyricSourceResultWithMeta, keepLoaderVisible = false
   const isStale = () => AppState.currentInjectionId !== injectionId;
 
   const lyrics = data.lyrics!;
+
+  // Apply OpenCC conversion if translation target is zh_CN <-> zh_TW
+  const targetTranslationLang = AppState.translationLanguage;
+  const isTranslateEnabled = AppState.isTranslateEnabled;
+
+  const ZH_CN_LANGS = ["zh-cn", "zh_cn", "zh-chs", "zh-sg", "zh_sg"];
+  const ZH_TW_LANGS = ["zh-tw", "zh_tw", "zh-cht", "zh-hk", "zh_hk", "zh-mo", "zh-mo"];
+
+  const isTargetZhCn = targetTranslationLang && ZH_CN_LANGS.includes(targetTranslationLang.toLowerCase());
+  const isTargetZhTw = targetTranslationLang && ZH_TW_LANGS.includes(targetTranslationLang.toLowerCase());
+
+  if (isTranslateEnabled && (isTargetZhCn || isTargetZhTw)) {
+    let sourceLanguage = data.language;
+    let isSourceZhCn = sourceLanguage && ZH_CN_LANGS.includes(sourceLanguage.toLowerCase());
+    let isSourceZhTw = sourceLanguage && ZH_TW_LANGS.includes(sourceLanguage.toLowerCase());
+
+    const shouldConvertCnToTw = isSourceZhCn && isTargetZhTw;
+    const shouldConvertTwToCn = isSourceZhTw && isTargetZhCn;
+
+    if (shouldConvertCnToTw || shouldConvertTwToCn) {
+      try {
+        const fromPreset = shouldConvertCnToTw ? "cn" : "tw";
+        const toPreset = shouldConvertCnToTw ? "tw" : "cn";
+        const converter = OpenCC.Converter({ from: fromPreset, to: toPreset });
+
+        lyrics.forEach(item => {
+          if (item.isInstrumental) return;
+
+          if (item.words) {
+            item.words = converter(item.words);
+          }
+          if (item.parts) {
+            item.parts.forEach(part => {
+              if (part.words) {
+                part.words = converter(part.words);
+              }
+            });
+          }
+          if (item.romanization) {
+            item.romanization = converter(item.romanization);
+          }
+          if (item.timedRomanization) {
+            item.timedRomanization.forEach(part => {
+              if (part.words) {
+                part.words = converter(part.words);
+              }
+            });
+          }
+
+          delete item.translation;
+          delete item.translations;
+        });
+
+        data.language = targetTranslationLang;
+        data.isOpenCCConverted = true;
+
+        log(LOG_PREFIX, `Successfully applied OpenCC conversion in-place (${fromPreset} -> ${toPreset})`);
+      } catch (e) {
+        log(LOG_PREFIX, "Failed to apply OpenCC conversion: " + e);
+      }
+    }
+  }
+
   cleanup();
 
   let lyricsWrapper = createLyricsWrapper();
@@ -529,7 +593,7 @@ async function processBatchTranslationsAndRomanizations(
   const lyrics = data.lyrics!;
   const targetTranslationLang = AppState.translationLanguage;
   const isRomanizationEnabled = AppState.isRomanizationEnabled;
-  const isTranslateEnabled = AppState.isTranslateEnabled;
+  const isTranslateEnabled = data.isOpenCCConverted ? false : AppState.isTranslateEnabled;
 
   const romanizationBatch: { index: number; text: string }[] = [];
   const translationBatch: { index: number; text: string }[] = [];
@@ -702,7 +766,10 @@ function injectTranslation(lyricElement: HTMLElement, text: string) {
 export function calculateLyricPositions() {
   setExtraHeight();
   if (AppState.lyricData && AppState.areLyricsTicking) {
-    const lyricsElement = document.getElementsByClassName(LYRICS_CLASS)[0] as HTMLElement;
+    const currentDoc = AppState.pipWindow ? AppState.pipWindow.document : document;
+    const lyricsElement = currentDoc.getElementsByClassName(LYRICS_CLASS)[0] as HTMLElement;
+
+    if (!lyricsElement) return;
 
     const data = AppState.lyricData;
     data.lyricWidth = lyricsElement.clientWidth;

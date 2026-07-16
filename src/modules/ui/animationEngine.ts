@@ -187,8 +187,8 @@ export function animationEngine(currentTime: number, eventCreationTime: number, 
     playerState === "PLAYER_PAGE_OPEN" ||
     playerState === "FULLSCREEN" ||
     playerState === "MINIPLAYER_IN_PLAYER_PAGE";
-  // Don't tick lyrics if they're not visible
-  if (tabSelector.getAttribute("aria-selected") !== "true" || !isPlayerOpen) {
+  // Don't tick lyrics if they're not visible (unless PiP is open)
+  if (!AppState.pipWindow && (tabSelector.getAttribute("aria-selected") !== "true" || !isPlayerOpen)) {
     animEngineState.doneFirstInstantScroll = false;
     return;
   }
@@ -220,7 +220,10 @@ export function animationEngine(currentTime: number, eventCreationTime: number, 
     const lyricScrollTime = currentTime + getCSSDurationInMs(lyricsElement, "--blyrics-scroll-timing-offset") / 1000;
 
     // Read layout values before the loop writes class changes, to avoid forced reflow
-    const tabRenderer = document.querySelector(TAB_RENDERER_SELECTOR) as HTMLElement | null;
+    let tabRenderer = document.querySelector(TAB_RENDERER_SELECTOR) as HTMLElement | null;
+    if (AppState.pipWindow && AppState.pipTabRenderer) {
+      tabRenderer = AppState.pipTabRenderer;
+    }
     if (!tabRenderer) return;
     if (tabRenderer !== observedTabRenderer) {
       setupTabRendererObserver(tabRenderer);

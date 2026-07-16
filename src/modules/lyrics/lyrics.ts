@@ -33,6 +33,7 @@ export type LyricSourceResultWithMeta = LyricSourceResult & {
   videoId: string;
   segmentMap: SegmentMap | null;
   providerKey?: string;
+  isOpenCCConverted?: boolean;
 };
 
 export function applySegmentMapToLyrics(lyricData: LyricsData | null, segmentMap: SegmentMap) {

@@ -25,6 +25,7 @@ interface Options {
   openaiApiEndpoint: string;
   openaiApiKey: string;
   openaiModel: string;
+  isAutoPipEnabled: boolean;
 }
 
 const saveOptions = (): void => {
@@ -62,6 +63,7 @@ const getOptionsFromForm = (): Options => {
     openaiApiEndpoint: (document.getElementById("openaiApiEndpoint") as HTMLInputElement).value,
     openaiApiKey: (document.getElementById("openaiApiKey") as HTMLInputElement).value,
     openaiModel: (document.getElementById("openaiModel") as HTMLInputElement).value,
+    isAutoPipEnabled: (document.getElementById("isAutoPipEnabled") as HTMLInputElement).checked,
   };
 };
 
@@ -217,6 +219,7 @@ const restoreOptions = (): void => {
     openaiApiEndpoint: "",
     openaiApiKey: "",
     openaiModel: "gpt-4o-mini",
+    isAutoPipEnabled: false,
   };
 
   chrome.storage.local.get(defaultOptions, setOptionsInForm);
@@ -241,6 +244,7 @@ const setOptionsInForm = (items: Options): void => {
   (document.getElementById("openaiApiEndpoint") as HTMLInputElement).value = items.openaiApiEndpoint || "";
   (document.getElementById("openaiApiKey") as HTMLInputElement).value = items.openaiApiKey || "";
   (document.getElementById("openaiModel") as HTMLInputElement).value = items.openaiModel || "gpt-4o-mini";
+  (document.getElementById("isAutoPipEnabled") as HTMLInputElement).checked = items.isAutoPipEnabled || false;
   romanizationDisabledLanguages = items.romanizationDisabledLanguages || [];
   translationDisabledLanguages = items.translationDisabledLanguages || [];
   updateExclusionsConfigVisibility();

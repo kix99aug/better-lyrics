@@ -884,5 +884,13 @@
   "theme_modal_section_custom": {
     "message": "Custom Themes",
     "description": "Section title for custom themes in the theme chooser modal"
+  },
+  "options_display_autoPip": {
+    "message": "窗口失去焦点时自动启用画中画歌词",
+    "description": "Auto Picture-in-Picture setting label"
+  },
+  "lyrics_pip_tooltip": {
+    "message": "开启画中画",
+    "description": "Tooltip for the PiP button"
   }
 }

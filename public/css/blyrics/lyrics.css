@@ -257,6 +257,7 @@
 
 #blyrics-wrapper {
 	margin-top: 0;
+	position: relative;
 }
 
 /* Animations */
@@ -284,4 +285,36 @@
 	to {
 		filter: drop-shadow(0 0 0rem var(--blyrics-glow-color));
 	}
+}
+
+#blyrics-pip-btn {
+	position: absolute;
+	top: 16px;
+	right: 16px;
+	z-index: 1000;
+	background: rgba(255, 255, 255, 0.1);
+	border: none;
+	border-radius: 50%;
+	width: 36px;
+	height: 36px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #fff;
+	cursor: pointer;
+	transition: background 0.2s, transform 0.2s;
+}
+
+#blyrics-pip-btn:hover {
+	background: rgba(255, 255, 255, 0.2);
+	transform: scale(1.05);
+}
+
+#blyrics-pip-btn:active {
+	transform: scale(0.95);
+}
+
+/* Hide the PiP button when it is inside the PiP window */
+[blyrics-pip-mode="true"] #blyrics-pip-btn {
+	display: none !important;
 }

@@ -232,6 +232,7 @@ export function loadTranslationSettings(): void {
       openaiApiEndpoint: "",
       openaiApiKey: "",
       openaiModel: "gpt-4o-mini",
+      isAutoPipEnabled: false,
     },
     items => {
       AppState.isTranslateEnabled = items.isTranslateEnabled;
@@ -243,6 +244,7 @@ export function loadTranslationSettings(): void {
       AppState.openaiApiEndpoint = items.openaiApiEndpoint || "";
       AppState.openaiApiKey = items.openaiApiKey || "";
       AppState.openaiModel = items.openaiModel || "gpt-4o-mini";
+      AppState.isAutoPipEnabled = items.isAutoPipEnabled || false;
     }
   );
 }

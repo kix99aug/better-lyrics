@@ -15,6 +15,7 @@ import {
 } from "@constants";
 import { AppState, handleModifications, reloadLyrics, type PlayerDetails } from "@core/appState";
 import { onAutoSwitchEnabled, onFullScreenDisabled } from "@modules/settings/settings";
+import { openPictureInPicture, closePictureInPicture } from "./pip";
 import {
   animationEngine,
   animEngineState,
@@ -258,6 +259,41 @@ export function lyricReloader(): void {
   }
 }
 
+let lastPlayerDetails: PlayerDetails | null = null;
+let pipAnimationFrameId: number | null = null;
+
+function startPipAnimationLoop(): void {
+  if (pipAnimationFrameId) return;
+
+  const loop = () => {
+    if (!AppState.pipWindow) {
+      pipAnimationFrameId = null;
+      return;
+    }
+
+    if (lastPlayerDetails && AppState.areLyricsTicking) {
+      animationEngine(
+        lastPlayerDetails.currentTime,
+        lastPlayerDetails.browserTime,
+        lastPlayerDetails.playing
+      );
+    }
+
+    pipAnimationFrameId = AppState.pipWindow.requestAnimationFrame(loop);
+  };
+
+  if (AppState.pipWindow) {
+    pipAnimationFrameId = AppState.pipWindow.requestAnimationFrame(loop);
+  }
+}
+
+function stopPipAnimationLoop(): void {
+  if (pipAnimationFrameId && AppState.pipWindow) {
+    AppState.pipWindow.cancelAnimationFrame(pipAnimationFrameId);
+    pipAnimationFrameId = null;
+  }
+}
+
 /**
  * Initializes the main player time event listener.
  * Handles video changes, lyric injection, and player state updates.
@@ -274,9 +310,36 @@ export function initializeLyrics(): void {
     }
   });
 
+  window.addEventListener("blur", async () => {
+    if (AppState.isAutoPipEnabled && AppState.areLyricsLoaded && AppState.areLyricsTicking && !AppState.pipWindow) {
+      try {
+        AppState.isAutoPipActive = true;
+        await openPictureInPicture();
+        startPipAnimationLoop();
+      } catch (e) {
+        log("Could not automatically open PiP window on blur:", e);
+        AppState.isAutoPipActive = false;
+      }
+    }
+  });
+
+  window.addEventListener("focus", () => {
+    if (AppState.pipWindow && AppState.isAutoPipActive) {
+      closePictureInPicture();
+      stopPipAnimationLoop();
+    }
+  });
+
   // @ts-ignore
   document.addEventListener("blyrics-send-player-time", (event: CustomEvent<PlayerDetails>) => {
     const detail = event.detail;
+    lastPlayerDetails = detail;
+
+    if (AppState.pipWindow && !pipAnimationFrameId) {
+      startPipAnimationLoop();
+    } else if (!AppState.pipWindow && pipAnimationFrameId) {
+      stopPipAnimationLoop();
+    }
 
     const currentVideoId = detail.videoId;
     const currentVideoDetails = detail.song + " " + detail.artist;

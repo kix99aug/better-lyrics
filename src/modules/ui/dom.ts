@@ -38,6 +38,7 @@ import { log } from "@utils";
 import { scrollEventHandler } from "./observer";
 import type { ThumbnailElement } from "@modules/lyrics/requestSniffer/NextResponse";
 import { disconnectResizeObserver } from "@modules/lyrics/injectLyrics";
+import { togglePictureInPicture } from "./pip";
 
 const syncTypeIcons: Record<SyncType, string> = {
   syllable: `<svg width="14" height="14" viewBox="0 0 1024 1024" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="636" y="239" width="389.981" height="233.271" rx="48" fill-opacity="0.5"/><path d="M0 335C0 289.745 0 267.118 14.0589 253.059C28.1177 239 50.7452 239 96 239H213C243.17 239 258.255 239 267.627 248.373C277 257.745 277 272.83 277 303V408C277 438.17 277 453.255 267.627 462.627C258.255 472 243.17 472 213 472H96C50.7452 472 28.1177 472 14.0589 457.941C0 443.882 0 421.255 0 376V335Z"/><path d="M337 304C337 273.83 337 258.745 346.373 249.373C355.745 240 370.83 240 401 240H460C505.255 240 527.882 240 541.941 254.059C556 268.118 556 290.745 556 336V377C556 422.255 556 444.882 541.941 458.941C527.882 473 505.255 473 460 473H401C370.83 473 355.745 473 346.373 463.627C337 454.255 337 439.17 337 409V304Z" fill-opacity="0.5"/><rect y="552.271" width="1024" height="233" rx="48" fill-opacity="0.5"/></svg>`,
@@ -108,23 +109,31 @@ let adStateObserver: MutationObserver | null = null;
  * @returns The lyrics wrapper element
  */
 export function createLyricsWrapper(): HTMLElement {
-  const tabRenderer = document.querySelector(TAB_RENDERER_SELECTOR) as HTMLElement;
-
-  tabRenderer.removeEventListener("scroll", scrollEventHandler);
-  tabRenderer.addEventListener("scroll", scrollEventHandler);
-
-  const existingWrapper = document.getElementById(LYRICS_WRAPPER_ID);
+  const currentDoc = AppState.pipWindow ? AppState.pipWindow.document : document;
+  const existingWrapper = currentDoc.getElementById(LYRICS_WRAPPER_ID);
 
   if (existingWrapper) {
     existingWrapper.replaceChildren();
     existingWrapper.style.top = "";
     existingWrapper.style.transition = "";
+    injectPipButton(existingWrapper);
     return existingWrapper;
   }
 
+  const tabRenderer = document.querySelector(TAB_RENDERER_SELECTOR) as HTMLElement;
+
+  tabRenderer.removeEventListener("scroll", scrollEventHandler);
+  tabRenderer.addEventListener("scroll", scrollEventHandler);
+
   const wrapper = document.createElement("div");
   wrapper.id = LYRICS_WRAPPER_ID;
-  tabRenderer.appendChild(wrapper);
+
+  if (AppState.pipWindow && AppState.pipTabRenderer) {
+    AppState.pipTabRenderer.appendChild(wrapper);
+  } else {
+    tabRenderer.appendChild(wrapper);
+  }
+  injectPipButton(wrapper);
 
   wrapper.addEventListener("copy", (e: ClipboardEvent) => {
     const selection = window.getSelection();
@@ -168,6 +177,22 @@ export function createLyricsWrapper(): HTMLElement {
 
   log(LYRICS_WRAPPER_CREATED_LOG);
   return wrapper;
+}
+
+function injectPipButton(parent: HTMLElement): void {
+  if (!(window as any).documentPictureInPicture) return;
+
+  const pipButton = document.createElement("button");
+  pipButton.id = "blyrics-pip-btn";
+  pipButton.title = t("lyrics_pip_tooltip") || "Open Picture-in-Picture";
+  pipButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+    <path d="M19 11h-8v6h8v-6zm4 8V4.98C23 3.88 22.1 3 21 3H3c-1.1 0-2 .88-2 1.98V19c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 .02H3V4.97h18v14.05z"/>
+  </svg>`;
+  pipButton.addEventListener("click", (e) => {
+    e.stopPropagation();
+    togglePictureInPicture();
+  });
+  parent.appendChild(pipButton);
 }
 
 /**
@@ -791,23 +816,32 @@ function getGeniusLink(song: string, artist: string): string {
 }
 
 export function setExtraHeight() {
-  const lyricsElement = document.getElementsByClassName(LYRICS_CLASS)[0] as HTMLElement;
+  const currentDoc = AppState.pipWindow ? AppState.pipWindow.document : document;
+  const lyricsElement = currentDoc.getElementsByClassName(LYRICS_CLASS)[0] as HTMLElement;
+  if (!lyricsElement) return;
+
   const lyricsHeight = lyricsElement.getBoundingClientRect().height;
-  const tabRenderer = document.querySelector(TAB_RENDERER_SELECTOR) as HTMLElement;
+
+  let tabRenderer = document.querySelector(TAB_RENDERER_SELECTOR) as HTMLElement;
+  if (AppState.pipWindow && AppState.pipTabRenderer) {
+    tabRenderer = AppState.pipTabRenderer;
+  }
+  if (!tabRenderer) return;
+
   const tabRendererHeight = tabRenderer.getBoundingClientRect().height;
   const scrollPosOffsetRatio = SCROLL_POS_OFFSET_RATIO.getNumberValue();
 
-  const firstLyric = document.querySelector("#blyrics-wrapper > div > div:nth-child(1)");
+  const firstLyric = currentDoc.querySelector(".blyrics--line");
 
   const paddingTop = Math.max(
     0,
     tabRendererHeight * scrollPosOffsetRatio - (firstLyric?.getBoundingClientRect().height || 0) / 2
   );
 
-  document.documentElement.style.setProperty("--blyrics-padding-top", paddingTop + "px");
+  currentDoc.documentElement.style.setProperty("--blyrics-padding-top", paddingTop + "px");
 
-  const footer = document.querySelector("#blyrics-wrapper > div > div.blyrics-footer");
-  const lastLyric = document.querySelector(".blyrics--line:not(:has(~ .blyrics--line))");
+  const footer = currentDoc.querySelector("#blyrics-wrapper > div > div.blyrics-footer") || currentDoc.querySelector(".blyrics-footer");
+  const lastLyric = currentDoc.querySelector(".blyrics--line:not(:has(~ .blyrics--line))");
 
   let extraHeight = Math.max(
     tabRendererHeight * (1 - scrollPosOffsetRatio) -
@@ -816,5 +850,5 @@ export function setExtraHeight() {
     tabRendererHeight - lyricsHeight
   );
 
-  document.documentElement.style.setProperty("--blyrics-padding-bottom", extraHeight + "px");
+  currentDoc.documentElement.style.setProperty("--blyrics-padding-bottom", extraHeight + "px");
 }

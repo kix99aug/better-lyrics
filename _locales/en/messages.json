@@ -951,5 +951,13 @@
   "theme_modal_section_custom": {
     "message": "Custom Themes",
     "description": "Section title for custom themes in the theme chooser modal"
+  },
+  "options_display_autoPip": {
+    "message": "Automatically show lyrics in Picture-in-Picture when losing focus",
+    "description": "Auto Picture-in-Picture setting label"
+  },
+  "lyrics_pip_tooltip": {
+    "message": "Open Picture-in-Picture",
+    "description": "Tooltip for the PiP button"
   }
 }

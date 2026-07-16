@@ -900,5 +900,13 @@
   "theme_modal_section_custom": {
     "message": "Custom Themes",
     "description": "Section title for custom themes in the theme chooser modal"
+  },
+  "options_display_autoPip": {
+    "message": "視窗失去焦點時自動啟用子母畫面歌詞",
+    "description": "Auto Picture-in-Picture setting label"
+  },
+  "lyrics_pip_tooltip": {
+    "message": "開啟子母畫面",
+    "description": "Tooltip for the PiP button"
   }
 }
