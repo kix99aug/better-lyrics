@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
-  "version": "2.2.1.1",
+  "version": "2.3.2",
   "default_locale": "en",
-  "name": "Better Lyrics (Lyrics for Youtube Music)",
+  "name": "Better Lyrics (Lyrics for YouTube Music)",
   "description": "__MSG_extensionDescription__",
-  "homepage_url": "https://better-lyrics.boidu.dev",
+  "homepage_url": "https://betterlyrics.org",
   "icons": {
     "16": "images/icons/icon-16.png",
     "48": "images/icons/icon-48.png",
@@ -19,6 +19,12 @@
     "storage",
     "alarms"
   ],
+  "externally_connectable": {
+    "matches": [
+      "https://unison.boidu.dev/*",
+      "https://blrcunison.vercel.app/*"
+    ]
+  },
   "optional_permissions": [
     "downloads"
   ],
@@ -40,9 +46,20 @@
         "css/disablestylizedanimations.css",
         "css/themesong.css",
         "css/themes/*.css",
+        "images/icons/shaders.png",
         "*.js.map",
         "pages/standalone-editor.html",
-        "pages/marketplace.html"
+        "pages/marketplace.html",
+        "pages/unison.html"
+      ]
+    },
+    {
+      "matches": [
+        "https://unison.boidu.dev/*",
+        "https://blrcunison.vercel.app/*"
+      ],
+      "resources": [
+        "pages/auth.html"
       ]
     }
   ],
@@ -99,5 +116,5 @@
   "action": {
     "default_popup": "src/options/options.html"
   },
-  "version_name": "2.2.1-canary 1"
+  "version_name": "2.3.2"
 }

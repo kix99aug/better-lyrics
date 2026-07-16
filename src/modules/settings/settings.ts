@@ -1,11 +1,19 @@
-import { LOG_PREFIX_CONTENT, LYRICS_DISABLED_ATTR } from "@constants";
+import {
+  DOCK_CLASS,
+  DOCK_CONTROL_ORDER_DEFAULT,
+  DOCK_DEFAULT_POSITION,
+  LOG_PREFIX_CONTENT,
+  LYRICS_DISABLED_ATTR,
+} from "@constants";
 import { AppState, reloadLyrics } from "@core/appState";
 import { clearCache, compileRicsToStyles, getStorage } from "@core/storage";
 import { log, setUpLog } from "@core/utils";
 import { calculateLyricPositions } from "@modules/lyrics/injectLyrics";
 import { clearCache as clearTranslationCache } from "@modules/lyrics/translation";
+import { mountDock, mountVotingSegment, reloadAlbumArt, unmountDock, updateDockPosition } from "@modules/ui/dom";
+import { applyGlobalOffsets } from "@modules/ui/lyricsDock/offset";
+import { isPlayerFullscreened, onFullscreenChange } from "@modules/ui/observer";
 import { applyCustomStyles, getAndApplyCustomStyles } from "@modules/ui/styleInjector";
-import { reloadAlbumArt } from "@modules/ui/dom";
 
 let hasInitializedMessageListener = false;
 
@@ -118,47 +126,75 @@ function onAutoHideCursor(
 
 let mouseTimer: number | null = null;
 let cursorEventListener: ((this: Document, ev: MouseEvent) => any) | null = null;
+let cursorAutoHideSettingEnabled = false;
+let fullscreenCursorHandlersRegistered = false;
+let cursorVisible = true;
+
+function detachCursorListener(): void {
+  if (mouseTimer) {
+    window.clearTimeout(mouseTimer);
+    mouseTimer = null;
+  }
+  if (cursorEventListener) {
+    document.removeEventListener("mousemove", cursorEventListener);
+    cursorEventListener = null;
+  }
+  document.getElementById("layout")?.removeAttribute("cursor-hidden");
+  cursorVisible = true;
+}
+
+function attachCursorListener(): void {
+  if (cursorEventListener) return;
+
+  cursorVisible = true;
+  document.getElementById("layout")?.removeAttribute("cursor-hidden");
+
+  function disappearCursor(): void {
+    mouseTimer = null;
+    if (cursorVisible) {
+      document.getElementById("layout")?.setAttribute("cursor-hidden", "");
+    }
+    cursorVisible = false;
+  }
+
+  function handleMouseMove(): void {
+    if (mouseTimer) {
+      window.clearTimeout(mouseTimer);
+    }
+    if (!cursorVisible) {
+      document.getElementById("layout")?.removeAttribute("cursor-hidden");
+      cursorVisible = true;
+    }
+    mouseTimer = window.setTimeout(disappearCursor, 3000);
+  }
+
+  cursorEventListener = handleMouseMove;
+  document.addEventListener("mousemove", handleMouseMove);
+  mouseTimer = window.setTimeout(disappearCursor, 3000);
+}
+
+function syncCursorListener(): void {
+  if (cursorAutoHideSettingEnabled && isPlayerFullscreened()) {
+    attachCursorListener();
+  } else {
+    detachCursorListener();
+  }
+}
 
 export function hideCursorOnIdle(): void {
+  if (!fullscreenCursorHandlersRegistered) {
+    fullscreenCursorHandlersRegistered = true;
+    onFullscreenChange(syncCursorListener, syncCursorListener);
+  }
+
   onAutoHideCursor(
     () => {
-      let cursorVisible = true;
-
-      function disappearCursor() {
-        mouseTimer = null;
-        if (cursorVisible) {
-          document.getElementById("layout")!.setAttribute("cursor-hidden", "");
-        }
-        cursorVisible = false;
-      }
-
-      function handleMouseMove() {
-        if (mouseTimer) {
-          window.clearTimeout(mouseTimer);
-        }
-        if (!cursorVisible) {
-          document.getElementById("layout")!.removeAttribute("cursor-hidden");
-          cursorVisible = true;
-        }
-        mouseTimer = window.setTimeout(disappearCursor, 3000);
-      }
-
-      if (cursorEventListener) {
-        document.removeEventListener("mousemove", cursorEventListener);
-      }
-
-      cursorEventListener = handleMouseMove;
-      document.addEventListener("mousemove", handleMouseMove);
+      cursorAutoHideSettingEnabled = true;
+      syncCursorListener();
     },
     () => {
-      if (mouseTimer) {
-        window.clearTimeout(mouseTimer);
-      }
-      document.getElementById("layout")!.removeAttribute("cursor-hidden");
-      if (cursorEventListener) {
-        document.removeEventListener("mousemove", cursorEventListener);
-        cursorEventListener = null;
-      }
+      cursorAutoHideSettingEnabled = false;
+      syncCursorListener();
     }
   );
 }
@@ -192,6 +228,12 @@ export function listenForPopupMessages(): void {
       hideCursorOnIdle();
       handleSettings();
       loadTranslationSettings();
+      loadLyricOffsetSettings();
+      loadPassiveScrollSetting();
+      loadDockSettings(() => {
+        syncDock();
+        hideDockOnIdleInFullscreen();
+      });
       AppState.shouldInjectAlbumArt = "Unknown";
       onAlbumArtEnabled(
         () => {
@@ -215,6 +257,129 @@ export function listenForPopupMessages(): void {
       }
     }
   });
+}
+
+export function loadPassiveScrollSetting(): void {
+  getStorage({ isPassiveScrollEnabled: true }, items => {
+    AppState.isPassiveScrollEnabled = items.isPassiveScrollEnabled;
+  });
+}
+
+// Keeps only known control keys, drops duplicates, and appends any missing ones so the
+// dock always has the full set regardless of stale or partial stored orders.
+function normalizeDockControlsOrder(stored: unknown): string[] {
+  const known = DOCK_CONTROL_ORDER_DEFAULT as readonly string[];
+  const order = Array.isArray(stored) ? stored.filter(key => typeof key === "string" && known.includes(key)) : [];
+  const unique = [...new Set(order)];
+  for (const key of known) {
+    if (!unique.includes(key)) unique.push(key);
+  }
+  return unique;
+}
+
+export function loadDockSettings(callback?: () => void): void {
+  getStorage(
+    [
+      "isControlsDockEnabled",
+      "controlsDockPosition",
+      "isControlsDockAutoHideInFullscreenEnabled",
+      "isUnisonPinnedDockEnabled",
+      "unisonPinnedDockPosition",
+      "isUnisonAutoHideInFullscreenEnabled",
+      "isDockSourceEnabled",
+      "isDockTranslateEnabled",
+      "isDockRomanizeEnabled",
+      "isDockOffsetEnabled",
+      "dockControlsOrder",
+    ],
+    items => {
+      AppState.isControlsDockEnabled = items.isControlsDockEnabled ?? items.isUnisonPinnedDockEnabled ?? true;
+      AppState.controlsDockPosition =
+        items.controlsDockPosition ?? items.unisonPinnedDockPosition ?? DOCK_DEFAULT_POSITION;
+      AppState.isControlsDockAutoHideInFullscreenEnabled =
+        items.isControlsDockAutoHideInFullscreenEnabled ?? items.isUnisonAutoHideInFullscreenEnabled ?? true;
+      AppState.isDockSourceEnabled = items.isDockSourceEnabled ?? true;
+      AppState.isDockTranslateEnabled = items.isDockTranslateEnabled ?? true;
+      AppState.isDockRomanizeEnabled = items.isDockRomanizeEnabled ?? true;
+      AppState.isDockOffsetEnabled = items.isDockOffsetEnabled ?? true;
+      AppState.dockControlsOrder = normalizeDockControlsOrder(items.dockControlsOrder);
+      callback?.();
+    }
+  );
+}
+
+function syncDock(): void {
+  if (!AppState.isControlsDockEnabled) {
+    unmountDock();
+    return;
+  }
+  mountDock(AppState.controlsDockPosition);
+  updateDockPosition(AppState.controlsDockPosition);
+  if (AppState.currentUnisonData) {
+    mountVotingSegment(AppState.currentUnisonData);
+  }
+}
+
+const DOCK_IDLE_HIDDEN_CLASS = `${DOCK_CLASS}--idle-hidden`;
+
+let dockIdleTimer: number | null = null;
+let dockMouseListener: ((this: Document, ev: MouseEvent) => any) | null = null;
+let wakeDockIdleFn: (() => void) | null = null;
+
+// Re-shows the dock and restarts the idle timer, for non-mouse interactions (keyboard
+// offset shortcuts) that should keep the dock visible in fullscreen.
+export function wakeDockIdle(): void {
+  wakeDockIdleFn?.();
+}
+
+function setDockIdleHidden(hidden: boolean): void {
+  for (const dock of Array.from(document.getElementsByClassName(DOCK_CLASS))) {
+    dock.classList.toggle(DOCK_IDLE_HIDDEN_CLASS, hidden);
+  }
+}
+
+export function hideDockOnIdleInFullscreen(): void {
+  if (dockMouseListener) {
+    document.removeEventListener("mousemove", dockMouseListener);
+    dockMouseListener = null;
+  }
+  if (dockIdleTimer) {
+    window.clearTimeout(dockIdleTimer);
+    dockIdleTimer = null;
+  }
+  setDockIdleHidden(false);
+  wakeDockIdleFn = null;
+
+  if (!AppState.isControlsDockAutoHideInFullscreenEnabled) return;
+
+  let dockVisible = true;
+
+  function hideDock() {
+    dockIdleTimer = null;
+    if (!dockVisible) return;
+    if (!document.getElementById("layout")?.hasAttribute("player-fullscreened")) return;
+    // Keep it up while the cursor is engaging the dock (clicking without moving the
+    // mouse would otherwise let this idle timer hide the dock mid-interaction).
+    if (document.querySelector(`.${DOCK_CLASS}__inner--expanded`)) {
+      dockIdleTimer = window.setTimeout(hideDock, 3000);
+      return;
+    }
+    setDockIdleHidden(true);
+    dockVisible = false;
+  }
+
+  function handleMouseMove() {
+    if (dockIdleTimer) window.clearTimeout(dockIdleTimer);
+    if (!dockVisible) {
+      setDockIdleHidden(false);
+      dockVisible = true;
+    }
+    dockIdleTimer = window.setTimeout(hideDock, 3000);
+  }
+
+  wakeDockIdleFn = handleMouseMove;
+  dockMouseListener = handleMouseMove;
+  document.addEventListener("mousemove", handleMouseMove);
 }
 
 /**
@@ -245,6 +410,26 @@ export function loadTranslationSettings(): void {
       AppState.openaiApiKey = items.openaiApiKey || "";
       AppState.openaiModel = items.openaiModel || "gpt-4o-mini";
       AppState.isAutoPipEnabled = items.isAutoPipEnabled || false;
+    }
+  );
+}
+
+/**
+ * Loads the global and per-sync-type lyric offsets from storage into AppState.
+ */
+export function loadLyricOffsetSettings(): void {
+  getStorage(
+    {
+      globalLyricOffset: 0,
+      richsyncOffsetTrim: 0,
+      lineOffsetTrim: 0,
+    },
+    items => {
+      applyGlobalOffsets({
+        globalLyricOffset: items.globalLyricOffset || 0,
+        richsyncOffsetTrim: items.richsyncOffsetTrim || 0,
+        lineOffsetTrim: items.lineOffsetTrim || 0,
+      });
     }
   );
 }

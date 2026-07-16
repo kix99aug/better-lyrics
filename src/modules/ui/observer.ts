@@ -2,8 +2,8 @@ import {
   AUTO_SWITCH_ENABLED_LOG,
   FULLSCREEN_BUTTON_SELECTOR,
   GENERAL_ERROR_LOG,
-  LYRICS_CLASS,
   LOG_PREFIX,
+  LYRICS_CLASS,
   LYRICS_TAB_CLICKED_LOG,
   LYRICS_WRAPPER_ID,
   PAUSING_LYRICS_SCROLL_LOG,
@@ -14,22 +14,22 @@ import {
   USER_SCROLLING_CLASS,
 } from "@constants";
 import { AppState, handleModifications, reloadLyrics, type PlayerDetails } from "@core/appState";
-import { onAutoSwitchEnabled, onFullScreenDisabled } from "@modules/settings/settings";
-import { openPictureInPicture, closePictureInPicture } from "./pip";
+import { preFetchLyrics } from "@modules/lyrics/lyrics";
+import { getSongMetadata } from "@modules/lyrics/requestSniffer/requestSniffer";
+import { onAutoSwitchEnabled, onFullScreenDisabled, wakeDockIdle } from "@modules/settings/settings";
 import {
   animationEngine,
   animEngineState,
   getResumeScrollElement,
   resetActiveAnimations,
 } from "@modules/ui/animationEngine";
+import { adjustLyricOffset, OFFSET_STEP, OFFSET_STEP_LARGE } from "@modules/ui/lyricsDock/offset";
 import {
   closePlayerPageIfOpenedForFullscreen,
   isNavigating,
   isPlayerPageOpen,
   openPlayerPageForFullscreen,
 } from "@modules/ui/navigation";
-import { getSongMetadata } from "@modules/lyrics/requestSniffer/requestSniffer";
-import { preFetchLyrics } from "@modules/lyrics/lyrics";
 import { log } from "@utils";
 import {
   addThumbnail,
@@ -41,6 +41,7 @@ import {
   resetThumbnailState,
   showYtThumbnail,
 } from "./dom";
+import { closePictureInPicture, openPictureInPicture } from "./pip";
 
 let wakeLock: WakeLockSentinel | null = null;
 
@@ -94,15 +95,16 @@ function cleanupWakeLock(): void {
 
 type FullscreenCallback = () => void;
 
-function onFullscreenChange(onEnter: FullscreenCallback, onExit: FullscreenCallback): void {
+const fullscreenEnterCallbacks: FullscreenCallback[] = [];
+const fullscreenExitCallbacks: FullscreenCallback[] = [];
+
+function ensureFullscreenObserver(): void {
+  if (fullscreenObserver) return;
+
   const appLayout = document.querySelector("ytmusic-app-layout");
   if (!appLayout) {
-    setTimeout(() => onFullscreenChange(onEnter, onExit), 1000);
+    setTimeout(ensureFullscreenObserver, 1000);
     return;
-  }
-
-  if (fullscreenObserver) {
-    fullscreenObserver.disconnect();
   }
 
   let wasFullscreen = appLayout.hasAttribute("player-fullscreened");
@@ -111,15 +113,25 @@ function onFullscreenChange(onEnter: FullscreenCallback, onExit: FullscreenCallb
     const isFullscreen = appLayout.hasAttribute("player-fullscreened");
 
     if (!wasFullscreen && isFullscreen) {
-      onEnter();
+      fullscreenEnterCallbacks.forEach(cb => cb());
     } else if (wasFullscreen && !isFullscreen) {
-      onExit();
+      fullscreenExitCallbacks.forEach(cb => cb());
     }
 
     wasFullscreen = isFullscreen;
   });
 
   fullscreenObserver.observe(appLayout, { attributes: true, attributeFilter: ["player-fullscreened"] });
+}
+
+export function onFullscreenChange(onEnter: FullscreenCallback, onExit: FullscreenCallback): void {
+  fullscreenEnterCallbacks.push(onEnter);
+  fullscreenExitCallbacks.push(onExit);
+  ensureFullscreenObserver();
+}
+
+export function isPlayerFullscreened(): boolean {
+  return document.querySelector("ytmusic-app-layout")?.hasAttribute("player-fullscreened") ?? false;
 }
 
 export function setupWakeLockForFullscreen(): void {
@@ -188,7 +200,7 @@ export function disableInertWhenFullscreen(): void {
             if (tabSelector && tabSelector.getAttribute("aria-selected") !== "true") {
               tabSelector.click();
               currentTab = 1;
-              if (AppState.areLyricsLoaded && AppState.lyricData?.syncType !== "none") {
+              if (AppState.areLyricsLoaded) {
                 AppState.areLyricsTicking = true;
               }
             }
@@ -227,7 +239,7 @@ export function lyricReloader(): void {
         setTimeout(() => {
           tabRenderer.scrollTop = scrollPositions[i];
           // Don't start ticking until we set the height
-          AppState.areLyricsTicking = AppState.areLyricsLoaded && AppState.lyricData?.syncType !== "none" && i === 1;
+          AppState.areLyricsTicking = AppState.areLyricsLoaded && i === 1;
         }, 0);
         currentTab = i;
 
@@ -462,13 +474,13 @@ export function scrollEventHandler(): void {
     if (animEngineState.scrollResumeTime < Date.now()) {
       log(PAUSING_LYRICS_SCROLL_LOG);
     }
-    animEngineState.scrollResumeTime = Date.now() + 25000;
-    if (!animEngineState.wasUserScrolling) {
-      getResumeScrollElement().removeAttribute("autoscroll-hidden");
-      const lyricsElement = document.getElementsByClassName(LYRICS_CLASS)[0] as HTMLElement;
-      lyricsElement.classList.add(USER_SCROLLING_CLASS);
-      animEngineState.wasUserScrolling = true;
-    }
+    const isPassive = AppState.lyricData?.syncType === "none";
+    animEngineState.scrollResumeTime = Date.now() + (isPassive ? 5000 : 25000);
+    animEngineState.wasUserScrolling = true;
+
+    getResumeScrollElement().removeAttribute("autoscroll-hidden");
+    const lyricsElement = document.getElementsByClassName(LYRICS_CLASS)[0] as HTMLElement;
+    lyricsElement.classList.add(USER_SCROLLING_CLASS);
   }
 }
 
@@ -611,6 +623,18 @@ export function setupAltHoverHandler(): void {
   document.addEventListener("keydown", (e: KeyboardEvent) => {
     if (e.key === "Alt") {
       updateAltState(true);
+    }
+
+    if (e.altKey && (e.code === "BracketLeft" || e.code === "BracketRight")) {
+      const tabSelector = document.getElementsByClassName(TAB_HEADER_CLASS)[1];
+      const isLyricsTabActive = tabSelector?.getAttribute("aria-selected") === "true";
+      const isFullscreen = document.querySelector("ytmusic-app-layout")?.hasAttribute("player-fullscreened");
+      if ((isLyricsTabActive || isFullscreen) && AppState.isDockOffsetEnabled) {
+        const step = e.shiftKey ? OFFSET_STEP_LARGE : OFFSET_STEP;
+        adjustLyricOffset(e.code === "BracketLeft" ? -step : step);
+        wakeDockIdle();
+        e.preventDefault();
+      }
     }
   });
 

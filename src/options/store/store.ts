@@ -9,8 +9,8 @@ import type { AllThemeStats, InstalledStoreTheme, StoreTheme, ThemeStats } from 
 
 let gridAnimationController: AnimationController | null = null;
 
-import { type AlertAction, showAlert } from "../editor/ui/feedback";
-import { getDisplayName, hasCertificate } from "./keyIdentity";
+import { getDisplayName, hasCertificate } from "@core/keyIdentity";
+import { type AlertAction, showAlert, showConfirm } from "../editor/ui/feedback";
 import { fetchAllStats, fetchUserRatings, submitRating, trackInstall } from "./themeStoreApi";
 import {
   applyStoreTheme,
@@ -20,8 +20,11 @@ import {
   getInstalledTheme,
   type InstallOptions,
   installTheme,
+  isAnyBuildCompatible,
+  isOlderBuild,
   isThemeInstalled,
   isVersionCompatible,
+  lowestBuildFloor,
   performSilentUpdates,
   refreshUrlThemesMetadata,
   removeTheme,
@@ -131,12 +134,85 @@ let currentFilters: FilterState = {
 };
 
 const EXTENSION_VERSION = chrome.runtime.getManifest().version;
-const ITEMS_PER_PAGE = 12;
-let currentPage = 1;
-let isMarketplacePage = false;
+
+/**
+ * Builds-aware compatibility: a theme is usable when any build qualifies for the
+ * running extension. Legacy themes (no builds[]) fall back to their single minVersion.
+ */
+function isThemeCompatible(theme: StoreTheme): boolean {
+  if (theme.builds && theme.builds.length > 0) {
+    return isAnyBuildCompatible(theme.builds, EXTENSION_VERSION);
+  }
+  return isVersionCompatible(theme.minVersion, EXTENSION_VERSION);
+}
+
+/**
+ * The lowest version floor to surface in "Requires Better Lyrics vX+" copy. For builds-aware
+ * themes this is the lowest build floor; legacy themes keep their single minVersion.
+ */
+function themeFloorVersion(theme: StoreTheme): string {
+  if (theme.builds && theme.builds.length > 0) {
+    return lowestBuildFloor(theme.builds) ?? theme.minVersion;
+  }
+  return theme.minVersion;
+}
+
+const INITIAL_BATCH_SIZE = 30;
+const LOAD_MORE_BATCH_SIZE = 20;
+let currentVisibleCards: HTMLElement[] = [];
+let renderedCount = 0;
+let infiniteScrollObserver: IntersectionObserver | null = null;
+
+const TEST_GENERATED_COUNT = 200;
+
+const TEST_THEMES_ENABLED = (() => {
+  try {
+    return process.env.EXTENSION_PUBLIC_ENABLE_TEST_THEMES === "true";
+  } catch {
+    return false;
+  }
+})();
+
+function pseudoRandom(seed: number): () => number {
+  let state = seed;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 0xffffffff;
+  };
+}
+
+function generateSyntheticTestThemes(): StoreTheme[] {
+  const palettes = ["1a1a2e", "2d3748", "4a5568", "744210", "742a2a", "276749", "2c5282", "44337a", "702459"];
+  const adjectives = ["Neon", "Pastel", "Midnight", "Sunset", "Aurora", "Velvet", "Glacier", "Ember", "Cosmic", "Lush"];
+  const nouns = ["Wave", "Glow", "Mist", "Pulse", "Drift", "Bloom", "Shade", "Veil", "Spark", "Dawn"];
+  const authors = ["Ada", "Linus", "Grace", "Dennis", "Margaret", "Tim", "Donald", "Barbara", "Anita", "Brian"];
+  const rand = pseudoRandom(0xb1c7);
+
+  return Array.from({ length: TEST_GENERATED_COUNT }, (_, i) => {
+    const palette = palettes[Math.floor(rand() * palettes.length)];
+    const adj = adjectives[Math.floor(rand() * adjectives.length)];
+    const noun = nouns[Math.floor(rand() * nouns.length)];
+    const creatorCount = 1 + Math.floor(rand() * 3);
+    const creators = Array.from({ length: creatorCount }, () => authors[Math.floor(rand() * authors.length)]);
+    const cover = `https://placehold.co/400x240/${palette}/ffffff?text=${encodeURIComponent(`${adj}+${noun}`)}`;
+    return {
+      id: `test-generated-${i}`,
+      title: `${adj} ${noun} ${i + 1}`,
+      description: `Auto-generated theme #${i + 1}: ${adj.toLowerCase()} ${noun.toLowerCase()} aesthetic for stress-testing the marketplace.`,
+      creators,
+      version: "1.0.0",
+      minVersion: i % 17 === 0 ? "99.0.0" : "2.0.0",
+      hasShaders: i % 4 === 0,
+      repo: `test/generated-${i}`,
+      coverUrl: cover,
+      imageUrls: [cover],
+      cssUrl: "",
+    };
+  });
+}
 
 function getTestThemes(): StoreTheme[] {
-  if (typeof process === "undefined" || process.env?.EXTENSION_PUBLIC_ENABLE_TEST_THEMES !== "true") {
+  if (!TEST_THEMES_ENABLED) {
     return [];
   }
 
@@ -149,7 +225,7 @@ function getTestThemes(): StoreTheme[] {
     "https://placehold.co/400x240/cc44cc/ffffff?text=Image+4",
   ];
 
-  return [
+  const curated: StoreTheme[] = [
     {
       id: "test-basic",
       title: "Basic Theme",
@@ -260,15 +336,92 @@ function getTestThemes(): StoreTheme[] {
       imageUrls: [placeholderImage],
       cssUrl: "",
     },
+    {
+      // Latest build needs 2.5.0.0 (above this 2.3.2 extension), older 1.2.0 build needs 2.0.0.0.
+      // The resolver serves 1.2.0, so the card shows v1.2.0 plus an "older build" notice.
+      id: "test-older-build",
+      title: "Pinned Older Build",
+      description:
+        "Latest build needs a newer Better Lyrics than you have, so the store serves you the older build that still works.",
+      creators: ["Build Pinner"],
+      version: "1.2.0",
+      minVersion: "2.0.0.0",
+      hasShaders: false,
+      repo: "test/older-build-theme",
+      coverUrl: placeholderImage,
+      imageUrls: [placeholderImage],
+      cssUrl: "",
+      builds: [
+        { version: "2.0.0", minVersion: "2.5.0.0", path: "themes/test-older-build", integrity: "sha256-test" },
+        { version: "1.2.0", minVersion: "2.0.0.0", path: "themes/test-older-build/v/1.2.0", integrity: "sha256-test" },
+      ],
+      latestVersion: "2.0.0",
+      latestMinVersion: "2.5.0.0",
+    },
+    {
+      // Multiple builds, and this 2.3.2 extension qualifies for the newest one, so no older-build notice.
+      id: "test-builds-latest",
+      title: "Multi-Build On Latest",
+      description:
+        "Has multiple builds, and your version qualifies for the newest one, so no older-build notice shows.",
+      creators: ["Build Author"],
+      version: "2.0.0",
+      minVersion: "2.0.0.0",
+      hasShaders: false,
+      repo: "test/builds-latest-theme",
+      coverUrl: placeholderImage,
+      imageUrls: [placeholderImage],
+      cssUrl: "",
+      builds: [
+        { version: "2.0.0", minVersion: "2.0.0.0", path: "themes/test-builds-latest", integrity: "sha256-test" },
+        {
+          version: "1.0.0",
+          minVersion: "1.5.0.0",
+          path: "themes/test-builds-latest/v/1.0.0",
+          integrity: "sha256-test",
+        },
+      ],
+      latestVersion: "2.0.0",
+      latestMinVersion: "2.0.0.0",
+    },
+    {
+      // Every build needs more than 2.3.2. Install stays enabled but warns first; the floor copy
+      // shows the lowest build floor (2.5.0.0), not the latest build's floor.
+      id: "test-builds-incompatible",
+      title: "Incompatible (Builds)",
+      description:
+        "Every build needs a newer Better Lyrics than you have. Install is not blocked, but it warns before installing.",
+      creators: ["Future Dev"],
+      version: "3.0.0",
+      minVersion: "3.0.0.0",
+      hasShaders: false,
+      repo: "test/builds-incompatible-theme",
+      coverUrl: placeholderImage,
+      imageUrls: [placeholderImage],
+      cssUrl: "",
+      builds: [
+        { version: "3.0.0", minVersion: "3.0.0.0", path: "themes/test-builds-incompatible", integrity: "sha256-test" },
+        {
+          version: "2.5.0",
+          minVersion: "2.5.0.0",
+          path: "themes/test-builds-incompatible/v/2.5.0",
+          integrity: "sha256-test",
+        },
+      ],
+      latestVersion: "3.0.0",
+      latestMinVersion: "3.0.0.0",
+    },
   ];
+
+  return [...curated, ...generateSyntheticTestThemes()];
 }
 
 function getTestStats(): AllThemeStats {
-  if (typeof process === "undefined" || process.env?.EXTENSION_PUBLIC_ENABLE_TEST_THEMES !== "true") {
+  if (!TEST_THEMES_ENABLED) {
     return {};
   }
 
-  return {
+  const stats: AllThemeStats = {
     "test-basic": { installs: 150, rating: 4.0, ratingCount: 80 },
     "test-markdown": { installs: 500, rating: 4.5, ratingCount: 200 },
     "test-markdown-images": { installs: 1200, rating: 4.8, ratingCount: 450 },
@@ -277,7 +430,20 @@ function getTestStats(): AllThemeStats {
     "test-incompatible": { installs: 50, rating: 4.0, ratingCount: 50 },
     "test-multi-author": { installs: 3000, rating: 4.0, ratingCount: 3500 },
     "test-long-description": { installs: 600, rating: 4.3, ratingCount: 180 },
+    "test-older-build": { installs: 420, rating: 4.6, ratingCount: 130 },
+    "test-builds-latest": { installs: 980, rating: 4.4, ratingCount: 260 },
+    "test-builds-incompatible": { installs: 75, rating: 4.1, ratingCount: 40 },
   };
+
+  const rand = pseudoRandom(0x5ed5);
+  for (let i = 0; i < TEST_GENERATED_COUNT; i++) {
+    stats[`test-generated-${i}`] = {
+      installs: Math.floor(rand() * 5000),
+      rating: 3 + rand() * 2,
+      ratingCount: Math.floor(rand() * 800),
+    };
+  }
+  return stats;
 }
 
 marked.setOptions({
@@ -400,6 +566,34 @@ function createClockIcon(): SVGSVGElement {
   return svg;
 }
 
+function createTagIcon(): SVGSVGElement {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "currentColor");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("fill-rule", "evenodd");
+  path.setAttribute("clip-rule", "evenodd");
+  path.setAttribute(
+    "d",
+    "M2.123 12.816c.287 1.003 1.06 1.775 2.605 3.32l1.83 1.83C9.248 20.657 10.592 22 12.262 22c1.671 0 3.015-1.344 5.704-4.033c2.69-2.69 4.034-4.034 4.034-5.705c0-1.67-1.344-3.015-4.033-5.704l-1.83-1.83c-1.546-1.545-2.318-2.318-3.321-2.605c-1.003-.288-2.068-.042-4.197.45l-1.228.283c-1.792.413-2.688.62-3.302 1.233S3.27 5.6 2.856 7.391l-.284 1.228c-.491 2.13-.737 3.194-.45 4.197m8-5.545a2.017 2.017 0 1 1-2.852 2.852a2.017 2.017 0 0 1 2.852-2.852m8.928 4.78l-6.979 6.98a.75.75 0 0 1-1.06-1.061l6.978-6.98a.75.75 0 0 1 1.061 1.061"
+  );
+  svg.appendChild(path);
+  return svg;
+}
+
+function createCommitIcon(): SVGSVGElement {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 16 16");
+  svg.setAttribute("fill", "currentColor");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute(
+    "d",
+    "M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5Zm-1.43-.75a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z"
+  );
+  svg.appendChild(path);
+  return svg;
+}
+
 function formatTimeAgo(isoDate: string): string {
   const rtf = new Intl.RelativeTimeFormat(navigator.language, { numeric: "auto" });
   const diffMs = new Date(isoDate).getTime() - Date.now();
@@ -437,7 +631,6 @@ export async function initMarketplaceUI(): Promise<void> {
   urlModalOverlay = document.getElementById("url-modal-overlay");
   urlPermissionModalOverlay = document.getElementById("url-permission-modal-overlay");
   shortcutsModalOverlay = document.getElementById("shortcuts-modal-overlay");
-  isMarketplacePage = true;
 
   setupMarketplaceListeners();
   setupDetailModalListeners();
@@ -445,7 +638,6 @@ export async function initMarketplaceUI(): Promise<void> {
   setupUrlPermissionModalListeners();
   setupShortcutsModalListeners();
   setupMarketplaceKeyboardListeners();
-  setupPaginationListeners();
 
   await loadUserRatings();
   await loadUserInstalls();
@@ -453,6 +645,7 @@ export async function initMarketplaceUI(): Promise<void> {
   refreshUrlThemesMetadata();
 
   await loadMarketplace();
+  setupInfiniteScroll();
 }
 
 function setupMarketplaceListeners(): void {
@@ -544,7 +737,6 @@ function setupMarketplaceFilters(): void {
 
   searchInput?.addEventListener("input", () => {
     currentFilters.searchQuery = searchInput.value.trim().toLowerCase();
-    currentPage = 1;
     applyFiltersToGrid();
   });
 
@@ -564,7 +756,6 @@ function setupMarketplaceFilters(): void {
         currentFilters.sortDirection = "desc";
       }
 
-      currentPage = 1;
       updateSortChipsUI();
       applyFiltersToGrid();
     });
@@ -579,7 +770,6 @@ function setupMarketplaceFilters(): void {
           currentFilters.sortBy = input.value as FilterState["sortBy"];
           currentFilters.sortDirection = "desc";
         }
-        currentPage = 1;
         updateSortChipsUI();
         applyFiltersToGrid();
       }
@@ -589,48 +779,46 @@ function setupMarketplaceFilters(): void {
   showRadios.forEach(radio => {
     radio.addEventListener("change", () => {
       currentFilters.showFilter = (radio as HTMLInputElement).value as FilterState["showFilter"];
-      currentPage = 1;
       applyFiltersToGrid();
     });
   });
 
   shaderCheckbox?.addEventListener("change", () => {
     currentFilters.hasShaders = shaderCheckbox.checked;
-    currentPage = 1;
     applyFiltersToGrid();
   });
 
   compatibleCheckbox?.addEventListener("change", () => {
     currentFilters.versionCompatible = compatibleCheckbox.checked;
-    currentPage = 1;
     applyFiltersToGrid();
   });
 
   updateSortChipsUI(false);
 }
 
-function setupPaginationListeners(): void {
-  const prevBtn = document.getElementById("pagination-prev");
-  const nextBtn = document.getElementById("pagination-next");
+function setupInfiniteScroll(): void {
+  const sentinel = document.getElementById("marketplace-scroll-sentinel");
+  if (!sentinel) return;
 
-  prevBtn?.addEventListener("click", () => {
-    if (currentPage > 1) {
-      currentPage--;
-      applyFiltersToGrid();
-      scrollToTop();
-    }
-  });
-
-  nextBtn?.addEventListener("click", () => {
-    currentPage++;
-    applyFiltersToGrid();
-    scrollToTop();
-  });
+  if (infiniteScrollObserver) infiniteScrollObserver.disconnect();
+  infiniteScrollObserver = new IntersectionObserver(
+    entries => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          renderNextBatch(LOAD_MORE_BATCH_SIZE);
+          break;
+        }
+      }
+    },
+    { rootMargin: "400px 0px" }
+  );
+  infiniteScrollObserver.observe(sentinel);
 }
 
-function scrollToTop(): void {
-  const content = document.querySelector(".marketplace-content");
-  content?.scrollIntoView({ behavior: "smooth", block: "start" });
+function setSentinelVisible(visible: boolean): void {
+  const sentinel = document.getElementById("marketplace-scroll-sentinel");
+  if (!sentinel) return;
+  sentinel.style.display = visible ? "" : "none";
 }
 
 function setupShortcutsModalListeners(): void {
@@ -696,7 +884,6 @@ function setSortFilter(value: "rating" | "downloads" | "newest", toggleDirection
   if (currentFilters.sortBy === value) {
     if (toggleDirection) {
       currentFilters.sortDirection = currentFilters.sortDirection === "desc" ? "asc" : "desc";
-      currentPage = 1;
       updateSortChipsUI();
       applyFiltersToGrid();
     }
@@ -704,7 +891,6 @@ function setSortFilter(value: "rating" | "downloads" | "newest", toggleDirection
     radio.checked = true;
     currentFilters.sortBy = value;
     currentFilters.sortDirection = "desc";
-    currentPage = 1;
     updateSortChipsUI();
     applyFiltersToGrid();
   }
@@ -715,7 +901,6 @@ function setShowFilter(value: "all" | "installed" | "not-installed"): void {
   if (radio && !radio.checked) {
     radio.checked = true;
     currentFilters.showFilter = value;
-    currentPage = 1;
     applyFiltersToGrid();
   }
 }
@@ -725,7 +910,6 @@ function toggleCheckboxFilter(id: string, filterKey: "hasShaders" | "versionComp
   if (checkbox) {
     checkbox.checked = !checkbox.checked;
     currentFilters[filterKey] = checkbox.checked;
-    currentPage = 1;
     applyFiltersToGrid();
   }
 }
@@ -796,30 +980,6 @@ function setupMarketplaceKeyboardListeners(): void {
         e.preventDefault();
         openShortcutsModal();
         break;
-      case "[":
-        e.preventDefault();
-        if (currentPage > 1) {
-          currentPage--;
-          applyFiltersToGrid();
-          scrollToTop();
-        }
-        break;
-      case "]":
-        e.preventDefault();
-        const totalVisible = storeThemesCache.filter(theme => {
-          const installedIds = new Set<string>();
-          return (
-            matchesSearchQuery(theme, currentFilters.searchQuery) &&
-            matchesInstallFilter(theme.id, installedIds, currentFilters.showFilter)
-          );
-        }).length;
-        const totalPages = Math.ceil(totalVisible / ITEMS_PER_PAGE);
-        if (currentPage < totalPages) {
-          currentPage++;
-          applyFiltersToGrid();
-          scrollToTop();
-        }
-        break;
       case "l":
         e.preventDefault();
         setShowFilter("all");
@@ -889,20 +1049,10 @@ async function loadMarketplace(): Promise<void> {
       return;
     }
 
-    storeThemesCache.forEach((theme, index) => {
+    storeThemesCache.forEach(theme => {
       const themeStats = storeStatsCache[theme.id];
       const card = createStoreThemeCard(theme, installedIds.has(theme.id), themeStats, undefined, activeThemeId);
-      card.style.animationDelay = `${index * 25}ms`;
-      card.classList.add("card-initial");
-      card.addEventListener(
-        "animationend",
-        () => {
-          card.classList.remove("card-initial");
-          card.style.animationDelay = "";
-        },
-        { once: true }
-      );
-      grid.appendChild(card);
+      hiddenCards.set(theme.id, card);
     });
 
     await applyFiltersToGrid();
@@ -947,6 +1097,9 @@ async function refreshMarketplace(): Promise<void> {
   storeThemesCache = [];
   storeStatsCache = {};
   hiddenCards.clear();
+  currentVisibleCards = [];
+  renderedCount = 0;
+  setSentinelVisible(false);
   resetFilters();
   await loadMarketplace();
 }
@@ -1032,30 +1185,20 @@ async function applyFiltersToGrid(): Promise<void> {
     const matchesSearch = matchesSearchQuery(theme, currentFilters.searchQuery);
     const matchesShowFilter = matchesInstallFilter(theme.id, installedIds, currentFilters.showFilter);
     const matchesShaderFilter = !currentFilters.hasShaders || theme.hasShaders;
-    const matchesVersionFilter =
-      !currentFilters.versionCompatible || isVersionCompatible(theme.minVersion, EXTENSION_VERSION);
+    const matchesVersionFilter = !currentFilters.versionCompatible || isThemeCompatible(theme);
 
     const matchesFilters = matchesSearch && matchesShowFilter && matchesShaderFilter && matchesVersionFilter;
 
-    let card = grid.querySelector(`.store-card[data-theme-id="${theme.id}"]`) as HTMLElement | null;
-    if (!card) {
-      card = hiddenCards.get(theme.id) || null;
-    }
-
+    const card =
+      (grid.querySelector(`.store-card[data-theme-id="${theme.id}"]`) as HTMLElement | null) ||
+      hiddenCards.get(theme.id) ||
+      null;
     if (!card) return;
 
-    if (matchesFilters) {
-      if (!card.parentElement) {
-        grid.appendChild(card);
-        hiddenCards.delete(theme.id);
-      }
-      visibleCards.push(card);
-    } else {
-      if (card.parentElement) {
-        card.remove();
-        hiddenCards.set(theme.id, card);
-      }
-    }
+    if (card.parentElement) card.remove();
+    hiddenCards.set(theme.id, card);
+
+    if (matchesFilters) visibleCards.push(card);
   });
 
   const showUrlThemes = currentFilters.showFilter === "installed" || currentFilters.showFilter === "all";
@@ -1064,34 +1207,26 @@ async function applyFiltersToGrid(): Promise<void> {
       const storeTheme = installedThemeToStoreTheme(installed);
       const matchesSearch = matchesSearchQuery(storeTheme, currentFilters.searchQuery);
       const matchesShaderFilter = !currentFilters.hasShaders || storeTheme.hasShaders;
-      const matchesVersionFilter =
-        !currentFilters.versionCompatible || isVersionCompatible(storeTheme.minVersion, EXTENSION_VERSION);
+      const matchesVersionFilter = !currentFilters.versionCompatible || isThemeCompatible(storeTheme);
 
+      let card = urlOnlyThemeCards.get(installed.id);
       if (!matchesSearch || !matchesShaderFilter || !matchesVersionFilter) {
-        const existingCard = urlOnlyThemeCards.get(installed.id);
-        if (existingCard?.parentElement) {
-          existingCard.remove();
-        }
+        if (card?.parentElement) card.remove();
         return;
       }
 
-      let card = urlOnlyThemeCards.get(installed.id);
       if (!card) {
         const urlInfo: UrlThemeInfo = { sourceUrl: installed.sourceUrl, repo: installed.repo };
         card = createStoreThemeCard(storeTheme, true, undefined, urlInfo);
         urlOnlyThemeCards.set(installed.id, card);
       }
 
-      if (!card.parentElement) {
-        grid.appendChild(card);
-      }
+      if (card.parentElement) card.remove();
       visibleCards.push(card);
     });
   } else {
     urlOnlyThemeCards.forEach(card => {
-      if (card.parentElement) {
-        card.remove();
-      }
+      if (card.parentElement) card.remove();
     });
   }
 
@@ -1117,27 +1252,8 @@ async function applyFiltersToGrid(): Promise<void> {
     return 0;
   });
 
-  visibleCards.forEach(card => grid.appendChild(card));
-
-  if (isMarketplacePage && visibleCards.length > ITEMS_PER_PAGE) {
-    const totalPages = Math.ceil(visibleCards.length / ITEMS_PER_PAGE);
-    if (currentPage > totalPages) currentPage = totalPages;
-
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-
-    visibleCards.forEach((card, index) => {
-      if (index >= startIndex && index < endIndex) {
-        if (!card.parentElement) grid.appendChild(card);
-      } else {
-        if (card.parentElement) card.remove();
-      }
-    });
-
-    updatePaginationUI(visibleCards.length, totalPages);
-  } else {
-    hidePagination();
-  }
+  currentVisibleCards = visibleCards;
+  renderedCount = 0;
 
   const existingEmpty = grid.querySelector(".store-empty");
   if (existingEmpty) existingEmpty.remove();
@@ -1147,73 +1263,50 @@ async function applyFiltersToGrid(): Promise<void> {
     emptyMsg.className = "store-empty";
     emptyMsg.textContent = t("marketplace_noThemesMatch");
     grid.appendChild(emptyMsg);
-    hidePagination();
+    setSentinelVisible(false);
+    return;
   }
+
+  renderNextBatch(INITIAL_BATCH_SIZE);
 }
 
-function updatePaginationUI(_totalItems: number, totalPages: number): void {
-  const paginationContainer = document.getElementById("marketplace-pagination");
-  const numbersContainer = document.getElementById("pagination-numbers");
-  const prevBtn = document.getElementById("pagination-prev") as HTMLButtonElement;
-  const nextBtn = document.getElementById("pagination-next") as HTMLButtonElement;
+function renderNextBatch(batchSize: number): void {
+  const grid = document.getElementById("store-modal-grid");
+  if (!grid) return;
 
-  if (!paginationContainer || !numbersContainer) return;
-
-  paginationContainer.style.display = "flex";
-
-  if (prevBtn) prevBtn.disabled = currentPage <= 1;
-  if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
-
-  numbersContainer.replaceChildren();
-
-  const maxVisiblePages = 5;
-  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-
-  if (endPage - startPage + 1 < maxVisiblePages) {
-    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  if (renderedCount >= currentVisibleCards.length) {
+    setSentinelVisible(false);
+    return;
   }
 
-  if (startPage > 1) {
-    numbersContainer.appendChild(createPageButton(1));
-    if (startPage > 2) {
-      const ellipsis = document.createElement("span");
-      ellipsis.className = "marketplace-pagination-info";
-      ellipsis.textContent = "...";
-      numbersContainer.appendChild(ellipsis);
+  const useStaggerAnimation = !gridAnimationController;
+  const start = renderedCount;
+  const end = Math.min(start + batchSize, currentVisibleCards.length);
+
+  for (let i = start; i < end; i++) {
+    const card = currentVisibleCards[i];
+    const themeId = card.dataset.themeId;
+    if (themeId) hiddenCards.delete(themeId);
+
+    if (useStaggerAnimation) {
+      const localIndex = i - start;
+      card.style.animationDelay = `${localIndex * 25}ms`;
+      card.classList.add("card-initial");
+      card.addEventListener(
+        "animationend",
+        () => {
+          card.classList.remove("card-initial");
+          card.style.animationDelay = "";
+        },
+        { once: true }
+      );
     }
+
+    grid.appendChild(card);
   }
 
-  for (let i = startPage; i <= endPage; i++) {
-    numbersContainer.appendChild(createPageButton(i));
-  }
-
-  if (endPage < totalPages) {
-    if (endPage < totalPages - 1) {
-      const ellipsis = document.createElement("span");
-      ellipsis.className = "marketplace-pagination-info";
-      ellipsis.textContent = "...";
-      numbersContainer.appendChild(ellipsis);
-    }
-    numbersContainer.appendChild(createPageButton(totalPages));
-  }
-}
-
-function createPageButton(pageNum: number): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.className = `marketplace-pagination-btn ${pageNum === currentPage ? "active" : ""}`;
-  btn.textContent = String(pageNum);
-  btn.addEventListener("click", () => {
-    currentPage = pageNum;
-    applyFiltersToGrid();
-    scrollToTop();
-  });
-  return btn;
-}
-
-function hidePagination(): void {
-  const paginationContainer = document.getElementById("marketplace-pagination");
-  if (paginationContainer) paginationContainer.style.display = "none";
+  renderedCount = end;
+  setSentinelVisible(renderedCount < currentVisibleCards.length);
 }
 
 function matchesSearchQuery(theme: StoreTheme, query: string): boolean {
@@ -1340,7 +1433,7 @@ function createStoreThemeCard(
     card.dataset.urlTheme = "true";
   }
 
-  const isCompatible = isVersionCompatible(theme.minVersion, EXTENSION_VERSION);
+  const isCompatible = isThemeCompatible(theme);
 
   const coverImg = document.createElement("img");
   coverImg.className = "store-card-cover";
@@ -1369,10 +1462,11 @@ function createStoreThemeCard(
   const actionBtn = document.createElement("button");
   actionBtn.className = `store-card-btn ${isInstalled ? "store-card-btn-remove" : "store-card-btn-install"}`;
   actionBtn.textContent = isInstalled ? t("marketplace_remove") : t("marketplace_install");
-  actionBtn.disabled = !isCompatible && !isInstalled;
 
+  // Incompatible themes stay installable: the button is never disabled, but it carries a hint
+  // and the install handler confirms with the user first.
   if (!isCompatible && !isInstalled) {
-    actionBtn.title = `Requires Better Lyrics v${theme.minVersion}+`;
+    actionBtn.title = `Requires Better Lyrics v${themeFloorVersion(theme)}+`;
   }
 
   actionBtn.addEventListener("click", async e => {
@@ -1468,9 +1562,10 @@ function createStoreThemeCard(
   }
 
   if (!isCompatible) {
+    const floor = themeFloorVersion(theme);
     const incompatBadge = document.createElement("span");
     incompatBadge.className = "store-card-badge-warn";
-    incompatBadge.title = `Requires Better Lyrics v${theme.minVersion} or higher`;
+    incompatBadge.title = `Requires Better Lyrics v${floor} or higher`;
 
     const warnIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     warnIcon.setAttribute("viewBox", "0 0 24 24");
@@ -1483,11 +1578,62 @@ function createStoreThemeCard(
     warnIcon.appendChild(warnPath);
 
     incompatBadge.appendChild(warnIcon);
-    incompatBadge.appendChild(document.createTextNode(`v${theme.minVersion}+`));
+    incompatBadge.appendChild(document.createTextNode(`v${floor}+`));
     content.appendChild(incompatBadge);
+  } else if (theme.builds && theme.latestVersion && isOlderBuild(theme.version, theme.builds)) {
+    content.appendChild(createOlderBuildBadge(theme.version, theme.latestVersion, theme.latestMinVersion));
   }
 
   return card;
+}
+
+function createInfoIcon(): SVGSVGElement {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "currentColor");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("fill-rule", "evenodd");
+  path.setAttribute("clip-rule", "evenodd");
+  path.setAttribute(
+    "d",
+    "m12 2l.642.005l.616.017l.299.013l.579.034l.553.046c4.687.455 6.65 2.333 7.166 6.906l.03.29l.046.553l.041.727l.006.15l.017.617L22 12l-.005.642l-.017.616l-.013.299l-.034.579l-.046.553c-.455 4.687-2.333 6.65-6.906 7.166l-.29.03l-.553.046l-.727.041l-.15.006l-.617.017L12 22l-.642-.005l-.616-.017l-.299-.013l-.579-.034l-.553-.046c-4.687-.455-6.65-2.333-7.166-6.906l-.03-.29l-.046-.553l-.041-.727l-.006-.15l-.017-.617l-.004-.318v-.648l.004-.318l.017-.616l.013-.299l.034-.579l.046-.553c.455-4.687 2.333-6.65 6.906-7.166l.29-.03l.553-.046l.727-.041l.15-.006l.617-.017Q11.673 2 12 2m0 9h-1l-.117.007a1 1 0 0 0 0 1.986L11 13v3l.007.117a1 1 0 0 0 .876.876L12 17h1l.117-.007a1 1 0 0 0 .876-.876L14 16l-.007-.117a1 1 0 0 0-.764-.857l-.112-.02L13 15v-3l-.007-.117a1 1 0 0 0-.876-.876zm.01-3l-.127.007a1 1 0 0 0 0 1.986L12 10l.127-.007a1 1 0 0 0 0-1.986z"
+  );
+  svg.appendChild(path);
+  return svg;
+}
+
+/**
+ * Shows on a card when the locally resolved build is behind the latest published build.
+ * The latest build needs a newer extension, so we surface the version gap without blocking.
+ */
+function createOlderBuildBadge(
+  resolvedVersion: string,
+  latestVersion: string,
+  latestMinVersion?: string
+): HTMLSpanElement {
+  const badge = document.createElement("span");
+  badge.className = "store-card-badge-older";
+  const floorHint = latestMinVersion ? ` needs Better Lyrics ${latestMinVersion}+` : "";
+  badge.title = `You're on v${resolvedVersion}. Latest v${latestVersion}${floorHint}`;
+  badge.appendChild(createInfoIcon());
+  badge.appendChild(document.createTextNode(`v${resolvedVersion}`));
+  return badge;
+}
+
+/**
+ * Warns before installing or updating a theme with no qualifying build. Returns true when the
+ * user wants to proceed (best-effort legacy/latest install) and false when they cancel.
+ * Compatible themes skip the prompt and return true immediately.
+ */
+async function confirmIncompatibleInstall(theme: StoreTheme): Promise<boolean> {
+  if (isThemeCompatible(theme)) return true;
+  const floor = themeFloorVersion(theme);
+  return showConfirm(
+    t("marketplace_install"),
+    `This theme needs Better Lyrics v${floor}+ and may not work on your version. Install anyway?`,
+    false,
+    t("marketplace_install")
+  );
 }
 
 async function handleThemeAction(theme: StoreTheme, button: HTMLButtonElement): Promise<void> {
@@ -1512,6 +1658,9 @@ async function handleThemeAction(theme: StoreTheme, button: HTMLButtonElement): 
       }
       showAlert(`Removed ${theme.title}`);
     } else {
+      if (!(await confirmIncompatibleInstall(theme))) {
+        return;
+      }
       const installedTheme = await installTheme(theme, { source: "marketplace" });
       button.className = "store-card-btn store-card-btn-remove";
       button.textContent = t("marketplace_remove");
@@ -1616,26 +1765,64 @@ async function openDetailModal(theme: StoreTheme, urlThemeInfo?: UrlThemeInfo): 
         statsEl.appendChild(statsRow);
       }
     }
+  }
 
+  // -- Footer meta chips --------------------------
+  const metaRow = document.getElementById("detail-meta-row");
+  if (metaRow) {
+    metaRow.replaceChildren();
+    const floor = themeFloorVersion(theme);
+    if (floor && floor !== "0.0.0") {
+      const requiresChip = document.createElement("span");
+      requiresChip.className = "detail-meta-chip";
+      requiresChip.appendChild(createTagIcon());
+      const requiresText = document.createElement("span");
+      requiresText.className = "detail-meta-text";
+      requiresText.textContent = t("marketplace_requiresVersion", [floor]);
+      requiresChip.appendChild(requiresText);
+      metaRow.appendChild(requiresChip);
+    }
+    if (theme.repo && theme.commit) {
+      const commitChip = document.createElement("a");
+      commitChip.className = "detail-meta-chip detail-meta-link";
+      commitChip.href = `https://github.com/${theme.repo}/commit/${theme.commit}`;
+      commitChip.target = "_blank";
+      commitChip.rel = "noopener";
+      commitChip.appendChild(createCommitIcon());
+      const commitText = document.createElement("span");
+      commitText.className = "detail-meta-text";
+      commitText.textContent = t("marketplace_commit", [theme.commit.slice(0, 7)]);
+      commitChip.appendChild(commitText);
+      metaRow.appendChild(commitChip);
+    }
     if (theme.locked) {
-      const timeStat = document.createElement("span");
-      timeStat.className = "detail-stat detail-stat-updated";
+      const updatedChip = document.createElement("span");
+      updatedChip.className = "detail-meta-chip";
       const localized = new Date(theme.locked).toLocaleString(navigator.language, {
         year: "numeric",
-        month: "long",
+        month: "short",
         day: "numeric",
         hour: "numeric",
         minute: "2-digit",
       });
-      timeStat.dataset.tooltip = t("marketplace_lastUpdatedOn", [localized]);
-      timeStat.appendChild(createClockIcon());
-      timeStat.appendChild(document.createTextNode(formatTimeAgo(theme.locked)));
-      statsEl.appendChild(timeStat);
+      updatedChip.appendChild(createClockIcon());
+      const updatedText = document.createElement("span");
+      updatedText.className = "detail-meta-text";
+      updatedText.appendChild(document.createTextNode(`${t("marketplace_lastUpdatedOn", [localized])} `));
+      const relative = document.createElement("span");
+      relative.className = "detail-meta-muted";
+      relative.textContent = `(${formatTimeAgo(theme.locked)})`;
+      updatedText.appendChild(relative);
+      updatedChip.appendChild(updatedText);
+      metaRow.appendChild(updatedChip);
     }
+    metaRow.style.display = metaRow.childElementCount > 0 ? "flex" : "none";
   }
 
   const repoLinkContainer = document.getElementById("detail-repo-link");
   const repoAnchor = document.getElementById("detail-repo-anchor") as HTMLAnchorElement;
+  const discussionLink = document.getElementById("detail-discussion-link") as HTMLAnchorElement | null;
+  const discussionSep = document.getElementById("detail-footer-sep");
   const ricsBadge = document.getElementById("detail-rics-badge");
   if (repoLinkContainer && repoAnchor) {
     if (theme.repo) {
@@ -1644,6 +1831,17 @@ async function openDetailModal(theme: StoreTheme, urlThemeInfo?: UrlThemeInfo): 
       repoAnchor.textContent = theme.repo;
     } else {
       repoLinkContainer.style.display = "none";
+    }
+  }
+
+  if (discussionLink) {
+    if (theme.discussionUrl) {
+      discussionLink.href = theme.discussionUrl;
+      discussionLink.style.display = "inline-flex";
+      if (discussionSep) discussionSep.style.display = "inline-flex";
+    } else {
+      discussionLink.style.display = "none";
+      if (discussionSep) discussionSep.style.display = "none";
     }
   }
 
@@ -1833,6 +2031,9 @@ async function openDetailModal(theme: StoreTheme, urlThemeInfo?: UrlThemeInfo): 
           updateRatingEnabled?.(false);
           updateDetailApplyBtn(false, false);
         } else {
+          if (!(await confirmIncompatibleInstall(theme))) {
+            return;
+          }
           const installedTheme = await installTheme(theme, { source: "marketplace" });
           actionBtn.className = "store-card-btn store-card-btn-remove";
           setActionButtonContent(actionBtn, t("marketplace_remove"), "I");
@@ -1886,7 +2087,7 @@ async function openDetailModal(theme: StoreTheme, urlThemeInfo?: UrlThemeInfo): 
       try {
         const isRegistryTheme = !!theme.commit && !urlThemeInfo;
         const shaderConfig = isRegistryTheme
-          ? await fetchRegistryShaderConfig(theme.id)
+          ? await fetchRegistryShaderConfig(theme.registryPath ?? `themes/${theme.id}`)
           : await fetchThemeShaderConfig(theme.repo);
         if (!shaderConfig) {
           showAlert(t("marketplace_shaderFetchFailed"));

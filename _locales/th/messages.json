@@ -87,6 +87,102 @@
     "message": "แสดงแอนิเมชันสวยงาม",
     "description": "Show stylized animations setting label"
   },
+  "options_display_passiveScroll": {
+    "message": "เลื่อนตามเนื้อเพลงแบบยังไม่ซิงก์",
+    "description": "Auto-scroll unsynced lyrics setting label"
+  },
+  "options_display_shadersPromo": {
+    "message": "แสดงลิงก์ไปยัง Shaders ของ Better Lyrics",
+    "description": "Toggle label for the Shaders companion link shown in the lyrics footer"
+  },
+  "options_display_unisonActions": {
+    "message": "Lyrics controls dock",
+    "description": "Display-section row label for the lyrics controls dock modal trigger"
+  },
+  "options_unisonModal_title": {
+    "message": "Lyrics controls dock",
+    "description": "Title of the lyrics controls dock settings modal"
+  },
+  "options_unisonModal_showPinned": {
+    "message": "Show controls dock",
+    "description": "Toggle label inside the lyrics controls dock modal for showing the floating dock"
+  },
+  "options_unisonModal_showPinned_hint": {
+    "message": "A floating dock to switch source, toggle translation and romanization, nudge sync, and vote on Unison lyrics",
+    "description": "Hint text under the Show controls dock toggle"
+  },
+  "options_unisonModal_autoHide": {
+    "message": "ซ่อนในโหมดเต็มหน้าจออัตโนมัติ",
+    "description": "Toggle label inside the Unison Actions modal for auto-hiding the dock when idle in fullscreen"
+  },
+  "options_unisonModal_autoHide_hint": {
+    "message": "ซ่อนตัวควบคุมแบบลอยเมื่อไม่ได้มีการขยับใด ๆ ในโหมดเต็มหน้าจอระยะหนึ่ง",
+    "description": "Hint text under the Auto-hide in fullscreen toggle"
+  },
+  "options_unisonModal_position": {
+    "message": "ตำแหน่ง",
+    "description": "Label above the visual position picker in the Unison Actions modal"
+  },
+  "options_unisonModal_position_topLeft": {
+    "message": "ซ้ายบน",
+    "description": "Tooltip for the top-left cell in the Unison position picker"
+  },
+  "options_unisonModal_position_topCenter": {
+    "message": "กลางบน",
+    "description": "Tooltip for the top-center cell in the Unison position picker"
+  },
+  "options_unisonModal_position_topRight": {
+    "message": "ขวาบน",
+    "description": "Tooltip for the top-right cell in the Unison position picker"
+  },
+  "options_unisonModal_position_bottomLeft": {
+    "message": "ซ้ายล่าง",
+    "description": "Tooltip for the bottom-left cell in the Unison position picker"
+  },
+  "options_unisonModal_position_bottomCenter": {
+    "message": "กลางล่าง",
+    "description": "Tooltip for the bottom-center cell in the Unison position picker"
+  },
+  "options_unisonModal_position_bottomRight": {
+    "message": "ขวาล่าง",
+    "description": "Tooltip for the bottom-right cell in the Unison position picker"
+  },
+  "options_unisonModal_controlsShown": {
+    "message": "Controls shown",
+    "description": "Label above the toggles that pick which controls appear in the lyrics dock"
+  },
+  "options_unisonModal_controlSource": {
+    "message": "Source switcher",
+    "description": "Toggle label for showing the lyrics source switcher control in the dock"
+  },
+  "options_unisonModal_controlOffset": {
+    "message": "Sync offset",
+    "description": "Toggle label for showing the sync offset control in the dock"
+  },
+  "lyricsDock_chooseSource": {
+    "message": "Choose lyrics source",
+    "description": "Accessible label for the lyrics dock button that opens the source provider dropdown"
+  },
+  "lyricsDock_previousSource": {
+    "message": "Previous source",
+    "description": "Accessible label for the lyrics dock button that switches to the previous lyrics provider"
+  },
+  "lyricsDock_nextSource": {
+    "message": "Next source",
+    "description": "Accessible label for the lyrics dock button that switches to the next lyrics provider"
+  },
+  "lyricsDock_offsetEarlier": {
+    "message": "Shift lyrics earlier",
+    "description": "Accessible label for the lyrics dock button that nudges sync timing earlier"
+  },
+  "lyricsDock_offsetLater": {
+    "message": "Shift lyrics later",
+    "description": "Accessible label for the lyrics dock button that nudges sync timing later"
+  },
+  "lyricsDock_offsetReset": {
+    "message": "Double-click to reset",
+    "description": "Tooltip on the lyrics dock offset clock icon; double-clicking it resets the sync offset to zero"
+  },
   "options_language_displayLanguage": {
     "message": "ภาษาที่แสดงผล",
     "description": "Label for the UI language selector dropdown"
@@ -122,6 +218,10 @@
   "options_sources_description": {
     "message": "เรียงลำดับความสำคัญของแหล่งที่มาของเนื้อเพลง เมื่อฟังเพลงจะเริ่มหาเนื้อเพลงจากอันดับด้านบนก่อน กดปิดใช้งานเมื่อไม่ใช้แหล่งนั้น",
     "description": "Sources settings section description"
+  },
+  "options_sources_openUnison": {
+    "message": "Unison",
+    "description": "Label on the small button in the Sources section header that opens the Unison page"
   },
   "options_themes_title": {
     "message": "การตั้งค่าธีม",
@@ -171,6 +271,10 @@
     "message": "ข้อมูลระบุตัวตนที่เป็นนิรนามของคุณสำหรับ Better Lyrics",
     "description": "Identity settings section description"
   },
+  "options_identity_warning": {
+    "message": "Treat this like your password. Never share it. Export a backup. No one can recover a lost identity, not even admins.",
+    "description": "Security warning in the Identity settings tab: keep the identity private and back it up because it is unrecoverable"
+  },
   "options_identity_yourIdentity": {
     "message": "ตัวตนของคุณ",
     "description": "Your identity label"
@@ -190,6 +294,98 @@
   "options_identity_importKey": {
     "message": "นำเข้าคีย์",
     "description": "Import key button label"
+  },
+  "options_identityImport_title": {
+    "message": "นำเข้าคีย์ตัวตน",
+    "description": "Title of the import identity modal"
+  },
+  "options_identityImport_chooseFile": {
+    "message": "เลือกไฟล์",
+    "description": "Label for the file picker button in the import identity modal"
+  },
+  "options_identityImport_or": {
+    "message": "หรือ",
+    "description": "Divider between file picker and paste textarea in the import identity modal"
+  },
+  "options_identityImport_pastePlaceholder": {
+    "message": "วางคีย์ตัวตนที่นี่",
+    "description": "Placeholder for the identity JSON textarea"
+  },
+  "options_identityImport_import": {
+    "message": "นำเข้า",
+    "description": "Confirm button label inside the import identity modal"
+  },
+  "options_nickname_description": {
+    "message": "เลือกชื่อของคุณสำหรับใช้ใน Better Lyrics จากตัวอักษรภาษาอังกฤษ ตัวเลข และขีดล่าง ความยาว 3 ถึง 20 ตัวอักษร",
+    "description": "Nickname subsection description"
+  },
+  "options_nickname_placeholder": {
+    "message": "เลือกชื่อเล่น",
+    "description": "Nickname input placeholder"
+  },
+  "options_nickname_save": {
+    "message": "บันทึก",
+    "description": "Nickname save button label"
+  },
+  "options_nickname_reset": {
+    "message": "รีเซ็ตเป็นค่าเริ่มต้น",
+    "description": "Nickname reset button label"
+  },
+  "options_nickname_modalTitle": {
+    "message": "ตั้งชื่อเล่นของคุณ",
+    "description": "Nickname modal title"
+  },
+  "options_nickname_edit": {
+    "message": "แก้ไข",
+    "description": "Nickname edit button label"
+  },
+  "options_nickname_editLabel": {
+    "message": "แก้ไขชื่อเล่น",
+    "description": "Accessible label for the nickname edit button"
+  },
+  "options_nickname_status_checking": {
+    "message": "กำลังตรวจสอบ",
+    "description": "Status while checking nickname availability"
+  },
+  "options_nickname_status_available": {
+    "message": "ว่างพร้อมใช้งาน",
+    "description": "Status when nickname is available"
+  },
+  "options_nickname_status_taken": {
+    "message": "มีคนใช้แล้ว",
+    "description": "Status when nickname is already taken"
+  },
+  "options_nickname_status_invalid": {
+    "message": "เฉพาะตัวอักษรภาษาอังกฤษ ตัวเลข และขีดล่าง ความยาว 3 ถึง 20 ตัวอักษร",
+    "description": "Status when nickname format is invalid"
+  },
+  "options_nickname_status_profane": {
+    "message": "ไม่สามารถใช้ชื่อนี้ได้ โปรดลองอีกครั้ง",
+    "description": "Status when nickname is flagged as inappropriate by the server"
+  },
+  "options_nickname_status_self": {
+    "message": "ชื่อนี้เป็นชื่อปัจจุบันของคุณ",
+    "description": "Status when entered nickname matches current"
+  },
+  "options_nickname_status_saved": {
+    "message": "บันทึกแล้ว",
+    "description": "Status when nickname is saved"
+  },
+  "options_nickname_status_submitting": {
+    "message": "กำลังบันทึก",
+    "description": "Status while nickname save is in flight"
+  },
+  "options_nickname_status_rateLimited": {
+    "message": "โปรดรอก่อนแล้วลองใหม่อีกครั้งในอีกสักครู่",
+    "description": "Status when nickname checks are rate limited"
+  },
+  "options_nickname_status_error": {
+    "message": "ไม่สามารถเข้าถึงเซิร์ฟเวอร์ได้",
+    "description": "Status when nickname request fails"
+  },
+  "options_alert_importEmpty": {
+    "message": "โปรดวาง JSON คีย์ตัวตนหรือเลือกไฟล์ก่อน",
+    "description": "Shown when the user clicks Import with no JSON provided"
   },
   "options_modal_selectTheme": {
     "message": "เลือกธีม",
@@ -295,6 +491,14 @@
     "message": "Better Lyrics Legato",
     "description": "Better Lyrics Legato provider name"
   },
+  "options_provider_betterLyricsPortato": {
+    "message": "Portato โดย Better Lyrics",
+    "description": "Better Lyrics Portato provider name"
+  },
+  "options_provider_betterLyricsUnison": {
+    "message": "Unison โดย Better Lyrics",
+    "description": "Better Lyrics Unison provider name"
+  },
   "options_provider_musixmatch": {
     "message": "Musixmatch",
     "description": "Musixmatch provider name"
@@ -310,6 +514,10 @@
   "options_provider_youtubeCaptions": {
     "message": "คำอธิบายภาพของ Youtube",
     "description": "Youtube Captions provider name"
+  },
+  "options_provider_binilyrics": {
+    "message": "BiniLyrics",
+    "description": "BiniLyrics provider name"
   },
   "options_syncType_syllable": {
     "message": "รายพยางค์",
@@ -336,7 +544,7 @@
     "description": "Line sync type tooltip"
   },
   "options_syncType_unsynced": {
-    "message": "เนื้อเพลงไม่ได้ถูกเน้นตามเวลา",
+    "message": "ยังไม่ซิงก์เวลา",
     "description": "Unsynced sync type label"
   },
   "options_syncType_unsynced_tooltip": {
@@ -563,14 +771,6 @@
     "message": "ติดตั้งจาก URL",
     "description": "Install from URL shortcut label"
   },
-  "marketplace_shortcutsPrevPage": {
-    "message": "ก่อนหน้า",
-    "description": "Previous page shortcut label"
-  },
-  "marketplace_shortcutsNextPage": {
-    "message": "ถัดไป",
-    "description": "Next page shortcut label"
-  },
   "marketplace_shortcutsSort": {
     "message": "เรียง",
     "description": "Sort shortcuts group"
@@ -717,13 +917,13 @@
     "message": "ที่มา: ",
     "description": "Lyrics source label"
   },
-  "lyrics_addToLrclib": {
-    "message": "เพิ่มเนื้อเพลงที่ LRCLib",
-    "description": "Add lyrics button text"
-  },
   "lyrics_searchOnGenius": {
     "message": "ค้นหาบน Genius",
     "description": "Search on Genius button text"
+  },
+  "lyrics_getShaders": {
+    "message": "ติดตั้ง Shaders สำหรับ Better Lyrics",
+    "description": "Footer button text linking to the Better Lyrics Shaders companion extension"
   },
   "lyrics_searching": {
     "message": "Better Lyrics กำลังค้นหาเนื้อเพลง...",
@@ -744,6 +944,10 @@
   "lyrics_notFound": {
     "message": "ไม่พบเนื้อเพลงสำหรับเพลงนี้",
     "description": "Message when no lyrics are available"
+  },
+  "lyrics_resumeAutoscroll": {
+    "message": "เลื่อนอัตโนมัติต่อ",
+    "description": "Resume Autoscroll button label"
   },
   "options_language_exclusions": {
     "message": "ภาษาที่ยกเว้น",
@@ -884,5 +1088,533 @@
   "theme_modal_section_custom": {
     "message": "ธีมกำหนดเอง",
     "description": "Section title for custom themes in the theme chooser modal"
+  },
+  "lyrics_submitToUnison": {
+    "message": "ส่งเนื้อร้องไปที่ Unison",
+    "description": "Button text for submitting lyrics to Unison"
+  },
+  "auth_pageTitle": {
+    "message": "เข้าสู่ระบบด้วย Better Lyrics",
+    "description": "Browser tab title for the auth consent popup"
+  },
+  "auth_consentHeading": {
+    "message": "เข้าสู่ระบบไปยัง $ORIGIN$",
+    "description": "Consent prompt heading. $ORIGIN$ is replaced with the requesting site, e.g. unison.boidu.dev",
+    "placeholders": {
+      "origin": {
+        "content": "$1",
+        "example": "unison.boidu.dev"
+      }
+    }
+  },
+  "auth_consentSubheading": {
+    "message": "คุณกำลังเข้าสู่ระบบในชื่อ $NAME$",
+    "description": "Identifies the current BL identity. $NAME$ is the deterministic display name.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Curious-Otter-7392"
+      }
+    }
+  },
+  "auth_consentExplainer": {
+    "message": "Better Lyrics จะลงลายเซ็นอิเล็กทรอนิกส์เพื่อยืนยันว่าคุณเป็นเจ้าของตัวตนนี้โดยเว็บไซต์จะไม่เห็นคีย์ลับส่วนตัวของคุณ",
+    "description": "Short explainer body in the consent popup"
+  },
+  "auth_rememberLabel": {
+    "message": "ไม่ต้องถามซ้ำอีกใน 24 ชั่วโมง",
+    "description": "Checkbox label allowing the user to remember this approval"
+  },
+  "auth_approve": {
+    "message": "อนุญาต",
+    "description": "Primary button: approve the sign-in request"
+  },
+  "auth_cancel": {
+    "message": "ยกเลิก",
+    "description": "Secondary button: reject the sign-in request"
+  },
+  "auth_invalidRequest": {
+    "message": "คำขอเข้าสู่ระบบไม่ถูกต้อง",
+    "description": "Error state shown when the popup receives malformed parameters"
+  },
+  "auth_sessionExpired": {
+    "message": "การขอเข้าสู่ระบบนี้หมดอายุแล้ว โปรดปิดหน้าต่างนี้แล้วลองใหม่อีกครั้ง",
+    "description": "Shown in the sign-in consent popup when the connection to the extension's service worker is lost before the user can approve or cancel."
+  },
+  "lyrics_requestSyncedVersion": {
+    "message": "ส่งคำขอให้มีเนื้อเพลงแบบซิงก์เวลา",
+    "description": "Button label asking the community to contribute synced lyrics for the current song"
+  },
+  "lyrics_requestedFirst": {
+    "message": "ส่งคำขอแล้ว · คุณเป็นคนแรก",
+    "description": "Button label after a successful first-ever request for this song"
+  },
+  "lyrics_requestedOneOther": {
+    "message": "ส่งคำขอแล้ว · มีอีก 1 คนต้องการเช่นกัน",
+    "description": "Button label after a successful request when exactly one other person has also requested"
+  },
+  "lyrics_requestedNOthers": {
+    "message": "ส่งคำขอแล้ว · มีอีก $N$ ต้องการเช่นกัน",
+    "description": "Button label after a successful request when N other people have also requested",
+    "placeholders": {
+      "n": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "lyrics_requestErrorRateLimit": {
+    "message": "ลองใหม่ในอีกประมาณ 1 นาที",
+    "description": "Button label shown briefly when the request is rate-limited"
+  },
+  "lyrics_requestErrorNetwork": {
+    "message": "ไม่สามารถเข้าถึง Unison ได้",
+    "description": "Button label shown briefly when the request fails for a transport/network reason (no HTTP response received)"
+  },
+  "lyrics_requestErrorServer": {
+    "message": "Unison เกิดปัญหาบางประการ",
+    "description": "Button label shown briefly when the request fails with a 5xx server error"
+  },
+  "lyrics_requestErrorGeneric": {
+    "message": "ไม่สามารถส่งคำขอได้",
+    "description": "Button label shown briefly when the request fails for any other reason (catch-all)"
+  },
+  "lyrics_requestSyncedLanded": {
+    "message": "เนื้อเพลงเวอร์ชันซิงก์กับเวลาพร้อมใช้แล้ว รีเฟรชเลยหรือไม่",
+    "description": "Button label when the server reports a synced version already exists; clicking reloads the page"
+  },
+  "unison_pageTitle": {
+    "message": "Unison - Better Lyrics",
+    "description": "Page title for the Unison dashboard"
+  },
+  "unison_title": {
+    "message": "Unison",
+    "description": "Unison branding title"
+  },
+  "unison_subtitle": {
+    "message": "เนื้อเพลงโดยชุมชน",
+    "description": "Unison subtitle text"
+  },
+  "unison_search": {
+    "message": "ค้นหาเนื้อเพลง",
+    "description": "Search button label"
+  },
+  "unison_searchPlaceholder": {
+    "message": "ค้นหาด้วยชื่อเพลง ศิลปิน หรือเนื้อเพลง",
+    "description": "Search input placeholder"
+  },
+  "unison_submit": {
+    "message": "ส่งเนื้อเพลง",
+    "description": "Submit lyrics button text"
+  },
+  "unison_submitSuccess": {
+    "message": "ส่งเนื้อเพลงเรียบร้อย!",
+    "description": "Success message after submitting lyrics"
+  },
+  "unison_submitDescription": {
+    "message": "ส่งเนื้อเพลงในรูปแบบชุมชนสำหรับเพลงใน YouTube Music ใดก็ได้ วางเนื้อเพลงในรูปแบบ LRC (มีตราเวลา) TTML (XML) หรือข้อความเปล่า เนื้อเพลงที่ลิงก์กับเวลาแล้วจะแสดงขึ้นก่อน",
+    "description": "Description text for the submission form"
+  },
+  "unison_composerHintPrefix": {
+    "message": "ใช้",
+    "description": "Text before Composer link in submit hint"
+  },
+  "unison_composerHintSuffix": {
+    "message": "สำหรับการสร้างเนื้อเพลงที่เน้นตามเวลาแบบรายคำ",
+    "description": "Text after Composer link in submit hint"
+  },
+  "unison_upvote": {
+    "message": "เห็นด้วย",
+    "description": "Upvote button tooltip"
+  },
+  "unison_downvote": {
+    "message": "ไม่เห็นด้วย",
+    "description": "Downvote button tooltip"
+  },
+  "unison_report": {
+    "message": "รายงาน",
+    "description": "Report button tooltip"
+  },
+  "unison_reportSuccess": {
+    "message": "รายงานแล้ว",
+    "description": "Report success tooltip text"
+  },
+  "unison_delete": {
+    "message": "ลบ",
+    "description": "Delete button label on a user's own Unison submission card"
+  },
+  "unison_deleteConfirm": {
+    "message": "ยืนยันการลบหรือไม่",
+    "description": "Delete button label after first click, asking the user to confirm before sending the request"
+  },
+  "unison_deleteSuccess": {
+    "message": "ลบแล้ว",
+    "description": "Transient label shown on the delete button after a successful delete"
+  },
+  "unison_deleteForbidden": {
+    "message": "คุณไม่ได้เป็นผู้ส่ง",
+    "description": "Error message shown on the delete button when the server rejects the request because the caller is not the submitter"
+  },
+  "unison_deleteFailed": {
+    "message": "ลบไม่สำเร็จ",
+    "description": "Generic error message shown on the delete button when the request fails for any other reason"
+  },
+  "unison_report_wrong_song": {
+    "message": "ผิดเพลง",
+    "description": "Report reason: wrong song"
+  },
+  "unison_report_bad_sync": {
+    "message": "ซิงก์เวลาผิด",
+    "description": "Report reason: bad synchronization"
+  },
+  "unison_report_offensive": {
+    "message": "ว่าร้ายผู้อื่น",
+    "description": "Report reason: offensive content"
+  },
+  "unison_report_spam": {
+    "message": "สแปม",
+    "description": "Report reason: spam"
+  },
+  "unison_report_other": {
+    "message": "อื่น ๆ",
+    "description": "Report reason: other"
+  },
+  "unison_confidence_low": {
+    "message": "ยังไม่ถูกยืนยัน",
+    "description": "Tier label for entries with fewer than the minimum votes for confidence"
+  },
+  "unison_confidence_medium": {
+    "message": "เชื่อถือได้",
+    "description": "Tier label for entries the community has accepted (the baseline 'good enough' tier)"
+  },
+  "unison_confidence_high": {
+    "message": "ได้คะแนนสูงสุด",
+    "description": "Tier label for entries with diverse community approval (rare, top tier)"
+  },
+  "unison_sortTopRated": {
+    "message": "คะแนนสูงสุดก่อน",
+    "description": "Sort by effective score, highest first"
+  },
+  "unison_sortBottomRated": {
+    "message": "คะแนนต่ำสุดก่อน",
+    "description": "Sort by effective score, lowest first"
+  },
+  "unison_sortMostVoted": {
+    "message": "จำนวนโหวตมากสุดก่อน",
+    "description": "Sort by vote count, most first"
+  },
+  "unison_sortLeastVoted": {
+    "message": "จำนวนโหวตน้อยสุดก่อน",
+    "description": "Sort by vote count, fewest first"
+  },
+  "unison_syncRichsync": {
+    "message": "ซิงก์ละเอียด",
+    "description": "Sync type: word/syllable-level timing. Reused by the sync badge on cards and the sync filter chip"
+  },
+  "unison_syncLinesync": {
+    "message": "ซิงก์รายบรรทัด",
+    "description": "Sync type: line-level timing. Reused by the sync badge on cards and the sync filter chip"
+  },
+  "unison_syncPlain": {
+    "message": "เนื้อเพลงเปล่า",
+    "description": "Sync type: unsynced lyrics. Reused by the sync badge on cards and the sync filter chip"
+  },
+  "unison_tier": {
+    "message": "ระดับ",
+    "description": "Filter bar group label for confidence tier"
+  },
+  "unison_tierTrustedPlus": {
+    "message": "เชื่อมั่นได้ขึ้นไป",
+    "description": "Tier filter chip hiding Unverified entries (shows Trusted and above)"
+  },
+  "unison_languageAll": {
+    "message": "ภาษาทั้งหมด",
+    "description": "Language dropdown default option"
+  },
+  "unison_format_lrc": {
+    "message": "แท็กรูปแบบ LRC",
+    "description": "LRC format badge"
+  },
+  "unison_format_ttml": {
+    "message": "แท็กรูปแบบ TTML",
+    "description": "TTML format badge"
+  },
+  "unison_format_plain": {
+    "message": "ข้อความล้วน",
+    "description": "Plain text format badge"
+  },
+  "unison_autoDetect": {
+    "message": "ตรวจจับอัตโนมัติ",
+    "description": "Auto-detect format option"
+  },
+  "unison_noResults": {
+    "message": "ไม่พบเนื้อเพลง ลองค้นหาใหม่อีกครั้ง",
+    "description": "No search results message"
+  },
+  "unison_interactingAs": {
+    "message": "ดำเนินการในฐานะ",
+    "description": "Identity label prefix"
+  },
+  "unison_loadMore": {
+    "message": "โหลดเพิ่ม",
+    "description": "Auto-loading indicator shown at the bottom of the feed while the next page is being fetched"
+  },
+  "unison_votes": {
+    "message": "คะแนน",
+    "description": "Vote count label"
+  },
+  "unison_createInComposer": {
+    "message": "สร้างเนื้อเพลงซิงก์กับเวลา",
+    "description": "Create in Composer link text in dashboard"
+  },
+  "unison_song": {
+    "message": "เพลง",
+    "description": "Song field label"
+  },
+  "unison_artist": {
+    "message": "ศิลปิน",
+    "description": "Artist field label"
+  },
+  "unison_album": {
+    "message": "อัลบั้ม",
+    "description": "Album field label"
+  },
+  "unison_duration": {
+    "message": "ความยาว",
+    "description": "Duration field label"
+  },
+  "unison_videoId": {
+    "message": "รหัสระบุวิดีโอ",
+    "description": "Video ID field label"
+  },
+  "unison_lyrics": {
+    "message": "เนื้อเพลง",
+    "description": "Lyrics textarea label"
+  },
+  "unison_format": {
+    "message": "รูปแบบ",
+    "description": "Format selector label"
+  },
+  "unison_openInYTMusic": {
+    "message": "เปิดใน YouTube Music",
+    "description": "Link text to open song in YouTube Music"
+  },
+  "unison_back": {
+    "message": "กลับ",
+    "description": "Back button text in detail view"
+  },
+  "unison_noPreview": {
+    "message": "วางหรือลากแล้ววางเนื้อเพลงเพื่อดูตัวอย่าง",
+    "description": "Empty state text shown in submit preview before lyrics are entered"
+  },
+  "unison_preview": {
+    "message": "แสดงตัวอย่าง",
+    "description": "Column title for parsed lyrics preview in detail view"
+  },
+  "unison_rawLyrics": {
+    "message": "เนื้อเพลงดิบ",
+    "description": "Column title for raw lyrics source in detail view"
+  },
+  "unison_isrc": {
+    "message": "ISRC",
+    "description": "ISRC field label"
+  },
+  "unison_placeholder_song": {
+    "message": "เช่น จี่หอย",
+    "description": "Placeholder for song input"
+  },
+  "unison_placeholder_artist": {
+    "message": "เช่น พี สะเดิด",
+    "description": "Placeholder for artist input"
+  },
+  "unison_placeholder_album": {
+    "message": "เช่น เมดอินไทยแลนด์",
+    "description": "Placeholder for album input"
+  },
+  "unison_placeholder_duration": {
+    "message": "เช่น 354",
+    "description": "Placeholder for duration input"
+  },
+  "unison_placeholder_videoId": {
+    "message": "เช่น dQw4w9WgXcQ",
+    "description": "Placeholder for video ID input"
+  },
+  "unison_placeholder_isrc": {
+    "message": "เช่น GBAYE0601498",
+    "description": "Placeholder for ISRC input"
+  },
+  "unison_placeholder_lyrics": {
+    "message": "วางเนื้อเพลงรูปแบบ LRC TTML หรือเนื้อเพลงเปล่าหรือลากแล้ววางไฟล์ที่นี่",
+    "description": "Placeholder for lyrics textarea"
+  },
+  "unison_durationHint": {
+    "message": "ความยาวเพลงเป็นวินาที",
+    "description": "Hint text below duration field label"
+  },
+  "unison_videoIdHint": {
+    "message": "รหัสจาก URL ของ YouTube Music ยาว 11 ตัวอักษร",
+    "description": "Hint text below video ID field label"
+  },
+  "unison_formatHint": {
+    "message": "ตรวจจับจากเนื้อหาเพลงอัตโนมัติ",
+    "description": "Hint text below format field label"
+  },
+  "unison_isrcHintPrefix": {
+    "message": "ค้นหาโดยใช้",
+    "description": "Text before ISRC finder link"
+  },
+  "unison_isrcHintLinkText": {
+    "message": "เครื่องมือค้นของ ISRC",
+    "description": "Link text for ISRC finder"
+  },
+  "unison_tabFeed": {
+    "message": "ฟีด",
+    "description": "Feed tab label for recent submissions"
+  },
+  "unison_tabMySubmissions": {
+    "message": "รายการที่ฉันส่ง",
+    "description": "Feed tab label for user's own submissions"
+  },
+  "unison_noSubmissions": {
+    "message": "คุณยังไม่ได้ส่งเนื้อเพลงใด ๆ",
+    "description": "Empty state for my submissions tab"
+  },
+  "unison_noFilterResults": {
+    "message": "ไม่พบเนื้อเพลงที่ตรงตามตัวกรองของคุณ",
+    "description": "Empty state shown when the active sort/filter combination returns no entries"
+  },
+  "unison_noFeedYet": {
+    "message": "ไม่พบเนื้อเพลงใด ๆ ตอนนี้",
+    "description": "Empty state shown when the recent feed is empty with no filters applied"
+  },
+  "unison_sync": {
+    "message": "ซิงก์",
+    "description": "Sync type label in detail view"
+  },
+  "unison_language": {
+    "message": "ภาษา",
+    "description": "Language label in detail view"
+  },
+  "unison_uploadedBy": {
+    "message": "Uploaded by",
+    "description": "Metadata row label in the Unison detail sidebar, before the uploader's name which links to their curator page"
+  },
+  "unison_languageUnspecified": {
+    "message": "Not specified",
+    "description": "Default option in the submission form's language dropdown, used when the submitter has not chosen a language"
+  },
+  "unison_fulfilledBadge": {
+    "message": "Requested & fulfilled",
+    "description": "Badge on the Unison detail page shown when this lyric answered a community request"
+  },
+  "unison_fulfilledNote": {
+    "message": "Someone wanted this on Better Lyrics, and $name$ came through with it.",
+    "description": "Sentence on the Unison detail page explaining that the lyric fulfilled a community request. $name$ is the uploader's display name",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "AcousticPrestoRemix"
+      }
+    }
+  },
+  "unison_fulfilledBoardLink": {
+    "message": "See the requests board",
+    "description": "Link on the Unison detail page that opens the community requests board (queue of most-wanted songs)"
+  },
+  "unison_validationRequired": {
+    "message": "โปรดระบุชื่อเพลง ศิลปิน รหัสวิดีโอ และเนื้อเพลง",
+    "description": "Validation error when required fields are missing"
+  },
+  "unison_submitFailed": {
+    "message": "เกิดข้อผิดพลาดขณะส่ง",
+    "description": "Fallback error message when submission fails"
+  },
+  "report_lyrics_title": {
+    "message": "รายงานเนื้อเพลง",
+    "description": "Title for the report lyrics modal"
+  },
+  "report_lyrics_info": {
+    "message": "ระบุเหตุผลว่าเพราะเหตุใดเนื้อเพลงจึงไม่เหมาะกับเพลงนี้",
+    "description": "Information about using the report lyrics modal"
+  },
+  "report_lyrics_wrong_song": {
+    "message": "ผิดเพลงหรือผิดเวอร์ชัน",
+    "description": "Reason for the report that the lyrics are for the wrong song or version"
+  },
+  "report_lyrics_bad_sync": {
+    "message": "ซิงก์เวลาผิด",
+    "description": "Reason for the report that the lyrics are too off on the part synchronization"
+  },
+  "report_lyrics_offensive": {
+    "message": "ว่าร้ายผู้อื่น",
+    "description": "Reason for the report that the lyrics are offensive or too offensive"
+  },
+  "report_lyrics_spam": {
+    "message": "สแปมหรือเนื้อเพลงไม่เกี่ยวข้องกับเพลง",
+    "description": "Reason for the report that the lyrics are a spam attempt and/or irrelevant with the sung parts"
+  },
+  "report_lyrics_other": {
+    "message": "เหตุผลอื่น",
+    "description": "Reason for the report that the lyrics is bad in other reasons"
+  },
+  "report_lyrics_details_placeholder": {
+    "message": "รายละเอียดเพิ่มเติมที่ต้องการแนบกับรายงาน",
+    "description": "Placeholder for report lyrics details input"
+  },
+  "report_lyrics_submit": {
+    "message": "ส่งรายงาน",
+    "description": "Submit button for reporting lyrics"
+  },
+  "report_lyrics_cancel": {
+    "message": "ยกเลิก",
+    "description": "Cancel button for reporting lyrics"
+  },
+  "report_lyrics_reporting": {
+    "message": "กำลังรายงานเนื้อเพลง...",
+    "description": "Report lyrics on a reporting process"
+  },
+  "report_lyrics_success": {
+    "message": "ขอบคุณที่แจ้งให้เราทราบ! เราจะตรวจสอบในอีกไม่นาน",
+    "description": "Shown after a lyrics report is successfully submitted"
+  },
+  "report_lyrics_already": {
+    "message": "เราได้รับรายงานแล้ว ขอบคุณ",
+    "description": "Shown when the user tries to report the same lyrics twice"
+  },
+  "report_lyrics_error": {
+    "message": "ส่งรายงานไม่สำเร็จ ต้องการลองใหม่อีกครั้งหรือไม่",
+    "description": "Shown when a lyrics report fails to submit"
+  },
+  "unison_tier_new": {
+    "message": "มาใหม่",
+    "description": "Trust tier badge for low-reputation Unison submitters"
+  },
+  "unison_tier_trusted": {
+    "message": "น่าเชื่อถือ",
+    "description": "Trust tier badge for mid-reputation Unison submitters"
+  },
+  "unison_tier_veteran": {
+    "message": "มือโปร",
+    "description": "Trust tier badge for high-reputation Unison submitters"
+  },
+  "unison_tier_expert": {
+    "message": "ผู้เชี่ยวชาญ",
+    "description": "Trust tier badge for top-reputation Unison submitters"
+  },
+  "unison_submitted_this": {
+    "message": "ส่งเนื้อเพลงนี้",
+    "description": "Sub-label under the submitter name in the Unison footer card"
+  },
+  "unison_score_label": {
+    "message": "คะแนน",
+    "description": "Noun shown after the numeric score in the Unison footer (e.g. the 'score' in '4.85 score · 12 votes')"
+  },
+  "unison_vote_singular": {
+    "message": "คะแนน",
+    "description": "Singular noun used after the number 1 in the Unison vote count (e.g. '1 vote')"
+  },
+  "unison_vote_plural": {
+    "message": "คะแนน",
+    "description": "Plural noun used after numbers other than 1 in the Unison vote count (e.g. '5 votes')"
   }
 }

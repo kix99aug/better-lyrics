@@ -3,6 +3,7 @@ html {
     min-width: 600px;
     max-width: 600px;
     overflow: auto;
+    scrollbar-width: thin;
 }
 
 nav {
@@ -20,7 +21,7 @@ nav a {
     width: 2rem;
     display: grid;
     place-items: center;
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
     cursor: pointer;
 }
 
@@ -61,22 +62,22 @@ h1 img {
     color: rgba(255, 255, 255, 0.5);
 }
 
-button,
-label,
-label input {
+.options-page :where(button),
+.options-page :where(label),
+.options-page :where(label input) {
     cursor: pointer;
 }
 
 #status,
 #status-css,
-label input {
+.options-page :where(label input) {
     position: absolute;
     opacity: 0;
 }
 
 #status,
 #status-css,
-button {
+.options-page :where(button) {
     font-size: 1.125rem;
 }
 
@@ -113,6 +114,89 @@ body {
     margin-top: 1.5rem;
 }
 
+#offset-modal-overlay .container:first-of-type {
+    margin-top: 0;
+}
+
+.offset-stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+#offset-modal-overlay .offset-stepper__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0.5rem;
+    background-color: hsla(0, 0%, 100%, 0.06);
+    color: rgba(255, 255, 255, 0.75);
+    cursor: pointer;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
+}
+
+#offset-modal-overlay .offset-stepper__btn:hover {
+    background-color: hsla(0, 0%, 100%, 0.14);
+    color: #fff;
+}
+
+.offset-stepper__btn svg {
+    display: block;
+}
+
+.offset-stepper__value {
+    min-width: 3.5rem;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+    cursor: default;
+    user-select: none;
+}
+
+#offset-modal-overlay .container.offset-row {
+    align-items: center;
+}
+
+.offset-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.offset-applies {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+}
+
+.offset-applies__label {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.offset-applies__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-weight: 500;
+}
+
+.offset-applies__chip svg {
+    display: block;
+    width: 0.875rem;
+    height: 0.875rem;
+}
+
 /* -- Theme Preview Card -------------------------- */
 
 .theme-preview-card {
@@ -133,7 +217,7 @@ body {
     box-sizing: border-box;
     overflow: hidden;
     min-height: 3.5rem;
-    outline: 1px solid #48494b;
+    outline: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .theme-preview-card::before {
@@ -205,6 +289,22 @@ body {
     height: 0.75rem;
 }
 
+.options-page :where(button) {
+    background-color: hsla(0, 0%, 100%, 0.1);
+    color: #fff;
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    width: 100%;
+    border-radius: 0.75rem;
+    text-align: center;
+    cursor: pointer;
+}
+
+.options-page :where(button:hover) {
+    background-color: hsla(0, 0%, 100%, 0.2);
+}
+
 .theme-preview-change-btn {
     position: relative;
     z-index: 1;
@@ -217,7 +317,7 @@ body {
     padding: 8px 12px;
     padding-right: 16px;
     border: none;
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
     cursor: pointer;
     font-size: 0.875rem;
     width: fit-content;
@@ -233,22 +333,6 @@ body {
 .theme-preview-change-btn svg {
     width: 0.875rem;
     height: 0.875rem;
-}
-
-button {
-    background-color: hsla(0, 0%, 100%, 0.1);
-    color: #fff;
-    padding: 14px 20px;
-    margin: 8px 0;
-    border: none;
-    width: 100%;
-    border-radius: 1000rem;
-    text-align: center;
-    cursor: pointer;
-}
-
-button:hover {
-    background-color: hsla(0, 0%, 100%, 0.2);
 }
 
 #status,
@@ -275,7 +359,7 @@ button:hover {
     opacity: 1;
 }
 
-select {
+.options-page :where(select) {
     appearance: none;
     background-color: transparent;
     border: none;
@@ -290,7 +374,7 @@ select {
     color: white;
 }
 
-select option {
+.options-page :where(select option) {
     color: black;
 }
 
@@ -343,7 +427,7 @@ select option {
     padding: 8px 12px;
     padding-right: 16px;
     border: none;
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
     text-align: center;
     cursor: pointer;
     font-size: 0.875rem;
@@ -354,6 +438,37 @@ select option {
 .small-btn svg {
     width: 0.875rem;
     height: 0.875rem;
+}
+
+.unison-open-btn {
+    margin-left: auto;
+    width: fit-content;
+    height: 28px;
+    padding: 0 10px 0 8px;
+    border-radius: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    color: #fff;
+    box-shadow:
+        rgba(0, 0, 0, 0.1) 0px 10px 15px -3px,
+        rgba(0, 0, 0, 0.05) 0px 4px 6px -2px,
+        inset rgba(255, 255, 255, 0.1) 0px 1px 0px 0px;
+}
+
+.unison-open-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.unison-open-btn img {
+    width: 14px;
+    height: 14px;
 }
 
 .button-row {
@@ -393,7 +508,7 @@ select option {
 	justify-content: center;
 	gap: 0.375rem;
 	padding: 8px 14px 8px 10px;
-	border-radius: 0.5rem;
+	border-radius: 0.75rem;
 	width: fit-content;
 	white-space: nowrap;
 	background: hsla(0, 0%, 100%, 0.1);
@@ -559,7 +674,7 @@ select option {
 	color: #fff;
 	padding: 10px;
 	border: none;
-	border-radius: 0.5rem;
+	border-radius: 0.75rem;
 	cursor: pointer;
 	width: fit-content;
 	box-shadow: rgba(0, 0, 0, 0.025) 0px 10px 15px -3px, rgba(0, 0, 0, 0.0125) 0px 4px 6px -2px, rgba(255, 255, 255, 0.1) 0px 1px inset;
@@ -754,14 +869,14 @@ select option {
     display: block;
 }
 
-label {
+.options-page :where(label) {
     position: relative;
     display: inline-block;
     width: 36px;
     height: 20px;
 }
 
-label input {
+.options-page :where(label input) {
     opacity: 0;
     width: 0;
     height: 0;
@@ -864,6 +979,30 @@ hr {
     margin-bottom: 1rem;
 }
 
+/* -- Identity Warning -------------------------- */
+.identity-warning {
+    display: flex;
+    gap: 0.5rem;
+    margin: 0.75rem 0 1rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid rgba(245, 185, 66, 0.3);
+    border-radius: 0.5rem;
+    background: rgba(245, 185, 66, 0.08);
+}
+
+.identity-warning__icon {
+    flex-shrink: 0;
+    margin-top: 0.0625rem;
+    color: #f5b942;
+}
+
+.identity-warning__text {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.75);
+}
+
 .sortable-list {
     display: flex;
     flex-direction: column;
@@ -893,7 +1032,7 @@ hr {
     user-select: none;
 }
 
-.sortable-item:active {
+.sortable-item:active:not(:has(.checkbox-container:active)) {
     cursor: grabbing;
     transform: scale(0.98);
     background: rgba(255, 255, 255, 0.08);
@@ -998,6 +1137,58 @@ hr {
 	font-size: 0.875em;
 	border-radius: 0.25rem;
 	border: 1px solid rgba(255, 255, 255, 0.15);
+	height: 25px;
+	display: grid;
+	place-items: center;
+}
+
+.identity-edit-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex: 1;
+	justify-content: flex-end;
+}
+
+#nickname-modal-status {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 1.25rem;
+	margin: 0.5rem 0 0;
+	font-size: 0.8125rem;
+	color: rgba(255, 255, 255, 0.55);
+	transition: color 120ms ease;
+}
+
+#nickname-modal-status:empty {
+	margin: 0;
+}
+
+#nickname-modal-status[data-state="available"],
+#nickname-modal-status[data-state="saved"] {
+	color: #4caf50;
+}
+
+#nickname-modal-status[data-state="taken"],
+#nickname-modal-status[data-state="error"] {
+	color: #ff7961;
+}
+
+#nickname-modal-status[data-state="invalid"],
+#nickname-modal-status[data-state="rateLimited"],
+#nickname-modal-status[data-state="profane"] {
+	color: #f5b942;
+}
+
+.nickname-status-spinner {
+	animation: nickname-status-spin 700ms linear infinite;
+}
+
+@keyframes nickname-status-spin {
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 .provider-name {
@@ -1601,7 +1792,7 @@ input.cm-textfield:focus-visible {
 }
 
 .edit-theme-btn {
-	border-radius: 0.5rem 0.25rem 0.25rem 0.5rem;
+	border-radius: 0.75rem 0.25rem 0.25rem 0.75rem;
 	color: rgba(255, 255, 255, 0.6);
 }
 
@@ -1614,7 +1805,7 @@ input.cm-textfield:focus-visible {
 }
 
 .delete-theme-btn {
-	border-radius: 0.25rem 0.5rem 0.5rem 0.25rem;
+	border-radius: 0.25rem 0.75rem 0.75rem 0.25rem;
 	color: rgba(255, 100, 100, 0.8);
 }
 
@@ -1717,7 +1908,7 @@ input.cm-textfield:focus-visible {
 	height: 2rem;
 	display: grid;
 	place-items: center;
-	border-radius: 0.375rem;
+	border-radius: 0.75rem;
 	transition: all 0.2s;
 	margin: 0;
 }
@@ -1788,7 +1979,7 @@ input.cm-textfield:focus-visible {
 
 .modal-btn {
 	padding: 0.625rem 1.25rem;
-	border-radius: 0.5rem;
+	border-radius: 0.75rem;
 	font-size: 0.875rem;
 	font-weight: 600;
 	cursor: pointer;
@@ -1825,6 +2016,287 @@ input.cm-textfield:focus-visible {
 
 .modal-btn-danger:hover {
 	background: rgb(220, 38, 38);
+}
+
+/* -- Import Identity Modal --------------------------*/
+
+.import-identity-modal {
+	max-width: 480px;
+}
+
+.import-identity-file-btn {
+	width: 100%;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+}
+
+.import-identity-file-btn svg {
+	flex-shrink: 0;
+}
+
+.modal-divider {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin: 1rem 0;
+	color: rgba(255, 255, 255, 0.4);
+	font-size: 0.8rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.modal-divider::before,
+.modal-divider::after {
+	content: "";
+	flex: 1;
+	height: 1px;
+	background: rgba(255, 255, 255, 0.1);
+}
+
+.modal-textarea {
+	width: 100%;
+	min-height: 8rem;
+	background: rgba(0, 0, 0, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 0.5rem;
+	padding: 0.75rem 1rem;
+	color: #fff;
+	font-size: 0.85rem;
+	font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+	line-height: 1.5;
+	outline: none;
+	resize: none;
+	transition: all 0.2s;
+	box-sizing: border-box;
+}
+
+.modal-textarea:focus {
+	border-color: rgba(255, 255, 255, 0.2);
+	background: rgba(0, 0, 0, 0.15);
+	box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+}
+
+.modal-textarea::placeholder {
+	color: rgba(255, 255, 255, 0.3);
+}
+
+.modal-textarea.dragging {
+	border-color: rgba(255, 255, 255, 0.35);
+	background: rgba(255, 255, 255, 0.05);
+	box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
+}
+
+/* -- Unison Actions Modal --------------------------*/
+
+.unison-actions-modal {
+	max-height: 85vh;
+	display: flex;
+	flex-direction: column;
+}
+
+.unison-actions-modal .modal-body {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+}
+
+.unison-modal-row {
+	align-items: center;
+}
+
+.unison-modal-row:first-of-type {
+    margin-top: 0;
+}
+
+.unison-modal-row__text {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	flex: 1;
+	min-width: 0;
+}
+
+.modal-row-hint {
+	font-size: 0.6875rem;
+	color: rgba(255, 255, 255, 0.4);
+	margin: 0;
+}
+
+.position-section {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.position-section__label {
+	font-size: 1rem;
+	font-weight: 500;
+	color: rgba(255, 255, 255, 0.92);
+}
+
+.position-picker {
+	display: flex;
+	justify-content: center;
+	padding: 0.5rem 0;
+}
+
+.position-frame {
+	width: 192px;
+	height: 192px;
+	border-radius: 16px;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	padding: 4px;
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	grid-template-rows: repeat(3, 1fr);
+	gap: 4px;
+}
+
+.position-cell {
+	border-radius: 4px;
+	background: rgba(255, 255, 255, 0.04);
+	cursor: pointer;
+	display: grid;
+	place-items: center;
+	transition: background 0.15s ease;
+}
+
+.position-cell::before {
+	content: "";
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.28);
+	transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.position-cell:hover {
+	background: rgba(255, 255, 255, 0.09);
+}
+
+.position-cell:hover::before {
+	background: rgba(255, 255, 255, 0.55);
+}
+
+.position-cell[data-selected="true"] {
+	background: hsla(232, 84%, 70%, 0.18);
+}
+
+.position-cell[data-selected="true"]::before {
+	background: hsl(232, 84%, 70%);
+	transform: scale(1.3);
+}
+
+.position-cell[data-pos="top-left"] {
+	grid-row: 1;
+	grid-column: 1;
+	border-top-left-radius: 12px;
+}
+
+.position-cell[data-pos="top-center"] {
+	grid-row: 1;
+	grid-column: 2;
+}
+
+.position-cell[data-pos="top-right"] {
+	grid-row: 1;
+	grid-column: 3;
+	border-top-right-radius: 12px;
+}
+
+.position-cell[data-pos="bottom-left"] {
+	grid-row: 3;
+	grid-column: 1;
+	border-bottom-left-radius: 12px;
+}
+
+.position-cell[data-pos="bottom-center"] {
+	grid-row: 3;
+	grid-column: 2;
+}
+
+.position-cell[data-pos="bottom-right"] {
+	grid-row: 3;
+	grid-column: 3;
+	border-bottom-right-radius: 12px;
+}
+
+.controls-shown-picker {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 4px;
+	padding: 4px;
+	margin-bottom: 1.5rem;
+	border-radius: 16px;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.control-cell {
+	box-sizing: border-box;
+	display: grid;
+	place-items: center;
+	width: auto;
+	height: 32px;
+	padding: 0.25rem;
+	border-radius: 4px;
+	background: rgba(255, 255, 255, 0.04);
+	color: rgba(255, 255, 255, 0.45);
+	cursor: grab;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.control-cell:active {
+	cursor: grabbing;
+}
+
+.control-cell.dragging {
+	opacity: 0.4;
+	background: rgba(255, 255, 255, 0.12);
+}
+
+.controls-shown-picker .control-cell:first-child:not(.dragging) {
+	border-top-left-radius: 12px;
+	border-bottom-left-radius: 12px;
+}
+
+.controls-shown-picker .control-cell:last-child:not(.dragging) {
+	border-top-right-radius: 12px;
+	border-bottom-right-radius: 12px;
+}
+
+.control-cell input {
+	position: absolute;
+	width: 0;
+	height: 0;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.control-cell__icon {
+	display: grid;
+	place-items: center;
+}
+
+.control-cell__icon svg {
+	width: 16px;
+	height: 16px;
+}
+
+.control-cell:hover {
+	background: rgba(255, 255, 255, 0.09);
+	color: rgba(255, 255, 255, 0.72);
+}
+
+.control-cell:has(input:checked) {
+	background: hsla(232, 84%, 70%, 0.18);
+	color: hsl(232, 84%, 78%);
+}
+
+#unison-actions-modal-body[data-pinned-disabled="true"] .unison-modal-row--dependent {
+	opacity: 0.45;
+	pointer-events: none;
 }
 
 /* -- Language Exclusions Modal (shared search + pills) --------------------------*/
@@ -1932,7 +2404,7 @@ input.cm-textfield:focus-visible {
 }
 
 .modal-tab {
-	border-radius: 0.25rem;
+	border-radius: 0.75rem;
 	padding: 0.375rem 0.75rem;
 	border: none;
 	background: none;
@@ -1985,4 +2457,37 @@ input.cm-textfield:focus-visible {
 
 .lang-exclusions-tab-content::-webkit-scrollbar-thumb:hover {
 	background: rgba(255, 255, 255, 0.3);
+}
+
+/* -- Squircle corners ---------------------------- */
+/* Feature-gated: browsers without corner-shape keep the original radii below. */
+
+@supports (corner-shape: superellipse(1.6)) {
+    .settings-group,
+    .modal,
+    .theme-preview-card {
+        border-radius: 1.5rem;
+    }
+
+    .text-group,
+    .sortable-item,
+    .theme-card,
+    .theme-deprecation-banner {
+        border-radius: 1rem;
+    }
+
+    .position-frame {
+        border-radius: 1.25rem;
+    }
+
+    .settings-group,
+    .text-group,
+    .sortable-item,
+    .modal,
+    .theme-preview-card,
+    .theme-card,
+    .theme-deprecation-banner,
+    .position-frame {
+        corner-shape: superellipse(1.6);
+    }
 }

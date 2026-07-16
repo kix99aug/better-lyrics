@@ -7,9 +7,12 @@ import {
   signInstall,
   signPayload,
   signRating,
-} from "./keyIdentity";
+} from "@core/keyIdentity";
+import { UnisonErrorCode } from "@modules/unison/errorCodes";
 import { fetchWithTimeout } from "./themeStoreService";
-import type { AllThemeStats, ApiResult, RatingResult } from "./types";
+import type { AllThemeStats, ApiResult, RatingResult, ResolvedBuild } from "./types";
+
+const RESOLVE_TIMEOUT_MS = 3000;
 
 const THEME_ID_MAX_LENGTH = 128;
 const THEME_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
@@ -25,6 +28,50 @@ function isValidThemeId(themeId: string): boolean {
 
 function isValidRating(rating: number): boolean {
   return Number.isInteger(rating) && rating >= 1 && rating <= 5;
+}
+
+function isResolvedBuild(value: unknown): value is ResolvedBuild {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.version === "string" &&
+    typeof candidate.minVersion === "string" &&
+    typeof candidate.path === "string" &&
+    typeof candidate.integrity === "string"
+  );
+}
+
+/**
+ * Asks the store-api which build of a theme to use for the given extension version.
+ * Returns the resolved build on a 200 response, or null on timeout / network error /
+ * non-200 / malformed payload so the caller can fall back to local resolution.
+ */
+export async function resolveThemeBuild(themeId: string, extensionVersion: string): Promise<ResolvedBuild | null> {
+  if (!isValidThemeId(themeId)) {
+    return null;
+  }
+
+  try {
+    const url = `${THEME_STORE_API_URL}/api/resolve/${encodeURIComponent(themeId)}?ext=${encodeURIComponent(extensionVersion)}`;
+    const response = await fetchWithTimeout(url, {}, RESOLVE_TIMEOUT_MS);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json().catch(() => null);
+    if (!isResolvedBuild(data)) {
+      console.warn(LOG_PREFIX_STORE, `Malformed resolve response for ${themeId}`);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    const error = err instanceof Error ? err.message : "Network error";
+    console.warn(LOG_PREFIX_STORE, `Failed to resolve build for ${themeId}:`, error);
+    return null;
+  }
 }
 
 export async function fetchAllStats(): Promise<ApiResult<AllThemeStats>> {
@@ -49,7 +96,7 @@ export async function trackInstall(themeId: string): Promise<ApiResult<number | 
   }
 
   try {
-    const signed = await signInstall(themeId);
+    let signed = await signInstall(themeId);
     let needsRegistration = !(await isKeyRegistered());
 
     const body: Record<string, unknown> = {
@@ -69,7 +116,10 @@ export async function trackInstall(themeId: string): Promise<ApiResult<number | 
 
     if (response.status === 400 && !needsRegistration) {
       const errorData = await response.json().catch(() => null);
-      if (errorData?.error === "PUBLIC_KEY_REQUIRED") {
+      if (errorData?.code === UnisonErrorCode.PUBLIC_KEY_REQUIRED) {
+        signed = await signInstall(themeId);
+        body.payload = signed.payload;
+        body.signature = signed.signature;
         body.publicKey = signed.publicKey;
         needsRegistration = true;
         response = await fetchWithTimeout(`${THEME_STORE_API_URL}/api/install/${encodeURIComponent(themeId)}`, {
@@ -113,7 +163,7 @@ export async function submitRating(
   }
 
   try {
-    const signed = await signRating(themeId, rating);
+    let signed = await signRating(themeId, rating);
     const certificate = await getCertificate();
     let needsRegistration = !(await isKeyRegistered());
 
@@ -144,7 +194,10 @@ export async function submitRating(
 
     if (response.status === 400 && !needsRegistration) {
       const errorData = await response.json().catch(() => null);
-      if (errorData?.error === "PUBLIC_KEY_REQUIRED") {
+      if (errorData?.code === UnisonErrorCode.PUBLIC_KEY_REQUIRED) {
+        signed = await signRating(themeId, rating);
+        body.payload = signed.payload;
+        body.signature = signed.signature;
         body.publicKey = signed.publicKey;
         needsRegistration = true;
         response = await fetchWithTimeout(`${THEME_STORE_API_URL}/api/rate/${encodeURIComponent(themeId)}`, {
@@ -182,7 +235,7 @@ export async function submitRating(
 
 export async function fetchUserRatings(): Promise<ApiResult<Record<string, number>>> {
   try {
-    const signed = await signPayload({});
+    let signed = await signPayload({});
     let needsRegistration = !(await isKeyRegistered());
 
     const body: Record<string, unknown> = {
@@ -202,7 +255,10 @@ export async function fetchUserRatings(): Promise<ApiResult<Record<string, numbe
 
     if (response.status === 400 && !needsRegistration) {
       const errorData = await response.json().catch(() => null);
-      if (errorData?.error === "PUBLIC_KEY_REQUIRED") {
+      if (errorData?.code === UnisonErrorCode.PUBLIC_KEY_REQUIRED) {
+        signed = await signPayload({});
+        body.payload = signed.payload;
+        body.signature = signed.signature;
         body.publicKey = signed.publicKey;
         needsRegistration = true;
         response = await fetchWithTimeout(`${THEME_STORE_API_URL}/api/user/ratings`, {
